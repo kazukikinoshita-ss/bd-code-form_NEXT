@@ -1,0 +1,134 @@
+// ===============================================
+// Mail.gs v2.5 (期間設定 年月日カレンダー版)
+// ===============================================
+
+const SLACK_WEBHOOK_URL = PropertiesService.getScriptProperties().getProperty('SLACK_WEBHOOK_URL');
+
+/**
+ * 登録・更新完了時にメールを送信する関数
+ */
+function sendCompletionEmail(type, userEmail, budgetCode, formData) {
+  if (!userEmail) return;
+
+  const ccEmail = 'support-mpc-operation@supership.jp';
+  const replyToEmail = 'support-mpc-operation@supership.jp';
+
+  let subject = '';
+  let body = '';
+
+  if (type === 'new') {
+    subject = `【MPコード管理】新規登録完了のお知らせ（${budgetCode}）`;
+    body = `以下の内容でMPコードが新規登録されました。\n` +
+           `※販管費ファイルへの反映完了には数日かかる場合がございます。ご了承ください\n\n` +
+           `--------\n` +
+           `対象MPコード：${budgetCode}\n` +
+           `対象BU：${formData.bu}\n` +
+           `計上部門：${formData.department}\n` +
+           `勘定科目：${formData.account}\n` +
+           `対象PJC：${formData.pjc || 'なし'}\n` +
+           `申請金額：${formData.amount}\n` +
+           `対象期間：${formData.startDate} 〜 ${formData.endDate}\n` +
+           `仕入先：${formData.vendor || 'なし'}\n` +
+           `備考1：${formData.notes || 'なし'}\n` +
+           `発番理由：${formData.summary}\n` +
+           `実行者：${userEmail}\n` +
+           `--------\n\n` +
+           `※このメールはシステムより自動送信されています。`;
+  } else if (type === 'update') {
+    subject = `【MPコード管理】登録情報更新完了のお知らせ（${budgetCode}）`;
+    body = `以下の内容でMPコードの登録情報が更新されました。\n` +
+           `※販管費ファイルへの反映完了には数日かかる場合がございます。ご了承ください\n\n` +
+           `--------\n` +
+           `対象MPコード：${budgetCode}\n` +
+           `対象BU：${formData.bu}\n` +
+           `計上部門：${formData.department}\n` +
+           `勘定科目：${formData.account}\n` +
+           `対象PJC：${formData.pjc || 'なし'}\n` +
+           `申請金額（更新後）：${formData.amount}\n` +
+           `対象期間（更新後）：${formData.startDate} 〜 ${formData.endDate}\n` +
+           `仕入先：${formData.vendor || 'なし'}\n` +
+           `備考1（更新後）：${formData.notes || 'なし'}\n` +
+           `発番理由（更新後）：${formData.summary}\n` +
+           `実行者：${userEmail}\n` +
+           `--------\n\n` +
+           `※このメールはシステムより自動送信されています。`;
+  } else {
+    return;
+  }
+
+  const options = { cc: ccEmail, replyTo: replyToEmail };
+
+  try {
+    MailApp.sendEmail(userEmail, subject, body, options);
+  } catch (e) {
+    console.error("メール送信エラー: " + e.message);
+  }
+}
+
+/**
+ * 登録・更新完了時にSlackへ通知を送信する関数
+ */
+function postToSlack(type, userEmail, budgetCode, formData) {
+  if (!SLACK_WEBHOOK_URL) {
+    console.error("Slack Webhook URLがスクリプトプロパティに設定されていません。");
+    return;
+  }
+
+  let slackBody = '';
+
+  if (type === 'new') {
+    slackBody = `@here\n` +
+                `以下の内容でMPコードが新規登録されました。\n` +
+                `ーーーーーーーーーーーーーーーーーーー\n` +
+                `対象MPコード：${budgetCode}\n` +
+                `対象BU：${formData.bu}\n` +
+                `計上部門：${formData.department}\n` +
+                `勘定科目：${formData.account}\n` +
+                `対象PJC：${formData.pjc || 'なし'}\n` +
+                `申請金額：${formData.amount}\n` +
+                `対象期間：${formData.startDate} 〜 ${formData.endDate}\n` +
+                `仕入先：${formData.vendor || 'なし'}\n` +
+                `備考1：${formData.notes || 'なし'}\n` +
+                `発番理由：${formData.summary}\n` +
+                `実行者：${userEmail}\n` +
+                `ーーーーーーーーーーーーーーーーーーー\n`;
+  } else if (type === 'update') {
+    slackBody = `@here\n` +
+                `以下の内容でMPコードの登録情報が更新されました。\n` +
+                `ーーーーーーーーーーーーーーーーーーー\n` +
+                `対象MPコード：${budgetCode}\n` +
+                `対象BU：${formData.bu}\n` +
+                `計上部門：${formData.department}\n` +
+                `勘定科目：${formData.account}\n` +
+                `対象PJC：${formData.pjc || 'なし'}\n` +
+                `申請金額（更新後）：${formData.amount}\n` +
+                `対象期間（更新後）：${formData.startDate} 〜 ${formData.endDate}\n` +
+                `仕入先：${formData.vendor || 'なし'}\n` +
+                `備考1（更新後）：${formData.notes || 'なし'}\n` +
+                `発番理由（更新後）：${formData.summary}\n` +
+                `実行者：${userEmail}\n` +
+                `ーーーーーーーーーーーーーーーーーーー\n`;
+  } else {
+    return;
+  }
+
+  const payloadData = {
+    "channel": "#support-mpc-operation",
+    "username": "MP新規登録・情報更新申請フォーム",
+    "text": slackBody,
+    "icon_emoji": ":fmpenguin:",
+    "link_names": true 
+  };
+
+  const options = {
+    "method": "POST",
+    "contentType": "application/json",
+    "payload": JSON.stringify(payloadData)
+  };
+
+  try {
+    UrlFetchApp.fetch(SLACK_WEBHOOK_URL, options);
+  } catch (e) {
+    console.error("Slack通知エラー: " + e.message);
+  }
+}
