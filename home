@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_blank">
+    <style>
+      body {
+        font-family: 'Helvetica Neue', Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #f9f9f9;
+      }
+      .menu-container {
+        text-align: center;
+        background: white;
+        padding: 3rem 4rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+      h1 {
+        color: #333;
+        margin-bottom: 2rem;
+      }
+      .button {
+        display: block;
+        text-decoration: none;
+        font-size: 1.2rem;
+        color: white;
+        background-color: #007bff;
+        padding: 1rem 2rem;
+        border-radius: 5px;
+        margin-bottom: 1rem;
+        transition: background-color 0.2s;
+        min-width: 250px;
+        cursor: pointer;
+      }
+      .button:hover {
+        background-color: #0056b3;
+      }
+      .button.update {
+        background-color: #28a745;
+      }
+      .button.update:hover {
+        background-color: #1e7e34;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="menu-container">
+      <h1>MPコード管理メニュー</h1>
+      <a id="new-link" class="button">新規登録</a>
+      <a id="update-link" class="button update">登録情報の更新</a>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        google.script.run
+          .withSuccessHandler(function(baseUrl) {
+            if (!baseUrl) {
+              alert('エラー: WebアプリのURLを取得できませんでした。再読み込みしてください。');
+              return;
+            }
+            
+            // クリック時に新しいウィンドウ（タブ）を開く
+            document.getElementById('new-link').onclick = function() {
+              window.open(baseUrl + '?page=new', '_blank');
+            };
+            document.getElementById('update-link').onclick = function() {
+              window.open(baseUrl + '?page=update', '_blank');
+            };
+          })
+          .withFailureHandler(function(error) {
+            alert('エラー: サーバーとの通信に失敗しました: ' + error.message);
+          })
+          .getWebAppUrl();
+      });
+    </script>
+  </body>
+</html>
