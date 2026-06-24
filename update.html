@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<style>
+body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 2rem; background-color: #f9f9f9; color: #333; }
+.header-nav { margin-bottom: 1rem; max-width: 600px; margin-left: auto; margin-right: auto; }
+.back-button { display: inline-block; text-decoration: none; font-size: 0.9rem; color: #fff; background-color: #6c757d; padding: 0.5rem 1rem; border-radius: 5px; transition: background-color 0.2s; }
+.back-button:hover { background-color: #5a6268; }
+.container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 600px; margin-left: auto; margin-right: auto;}
+h1 { color: #444; }
+p.description { color: #666; font-size: 0.9rem; margin-top: -1rem; margin-bottom: 1.5rem; }
+.form-group { margin-bottom: 1rem; }
+label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+label small { font-weight: normal; color: #666; display: block; margin-top: 4px;}
+input { width: 100%; padding: 0.5rem; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+.period-group { display: flex; gap: 10px; align-items: center; }
+.period-group input { flex: 1; }
+button { background-color: #007bff; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; transition: background-color 0.2s; width: 100%; margin-top: 1rem; }
+button:disabled { background-color: #a0a0a0; cursor: not-allowed; }
+button:not(:disabled):hover { background-color: #0056b3; }
+#search-button { width: auto; margin-top: 0; }
+#message { margin-top: 1.5rem; padding: 1rem; border-radius: 5px; text-align: center; }
+.success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+.error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+.info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+hr { border: none; border-top: 1px solid #eee; margin: 2rem 0; }
+.spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-right: 10px; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 案内用メッセージのスタイル */
+.notice-box {
+  background-color: #e9ecef;
+  padding: 1rem;
+  border-radius: 5px;
+  border-left: 5px solid #007bff;
+  margin-bottom: 1.5rem;
+}
+.notice-box p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #495057;
+}
+.notice-box a {
+  color: #007bff;
+  font-weight: bold;
+  text-decoration: underline;
+  display: inline-block;
+  margin-top: 5px;
+}
+.notice-box a:hover {
+  color: #0056b3;
+}
+
+/* カスタムモーダルのスタイル */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+.modal-box { background: white; padding: 2rem; border-radius: 8px; max-width: 400px; width: 90%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; }
+.modal-title { font-weight: bold; font-size: 1.2rem; margin-bottom: 1rem; color: #d9534f; }
+.modal-text { margin-bottom: 1.5rem; white-space: pre-wrap; line-height: 1.5; }
+.modal-button { color: white; padding: 0.5rem 2rem; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; margin: 0 0.5rem; transition: background-color 0.2s; }
+.btn-ok { background-color: #007bff; } .btn-ok:hover { background-color: #0056b3; }
+.btn-yes { background-color: #007bff; } .btn-yes:hover { background-color: #0056b3; }
+.btn-no { background-color: #6c757d; } .btn-no:hover { background-color: #5a6268; }
+.input-error { background-color: #ffe6e6 !important; border: 1px solid #dc3545 !important; color: #721c24; }
+</style>
+</head>
+<body>
+<div class="header-nav">
+<a href="<?= topUrl ?>" class="back-button" >← TOPに戻る</a>
+</div>
+<div class="container">
+<h1>情報マスタ 更新フォーム</h1>
+<p class="description" >ここでは「情報マスタ」の情報を更新します。IDや有効期限などの基本情報は変更できません。</p>
+
+<div id="search-section">
+<div class="form-group">
+<label for="search-key">更新するMPコードを入力してください:</label>
+<input type="text" id="search-key" placeholder= "例: 000001_001" >
+</div>
+<button id="search-button" >検索</button>
+</div>
+<hr>
+
+<form id="update-form" style="display:none;">
+<h3>▼ 以下の情報を編集してください</h3>
+<p><strong>対象MPコード: <span id="display-budget-code"></span></strong></p>
+
+<div class="notice-box">
+  <p>※金額を修正・再配分したい場合は、こちらのフォームではなく以下のツールから行ってください。</p>
+  <a href="#" id="manager-link" target="_blank">一括検索・更新ツールを開く（ダミー）</a>
+</div>
+
+<input type="hidden" id="row-number"><input type="hidden" id="budget-code">
+
+<input type="hidden" id="amount" name="amount">
+
+<div class="form-group"><label for="bu">対象BU:</label><input type="text" id="bu" name="bu" required list="bu-list"><datalist id="bu-list"></datalist></div>
+<div class="form-group"><label for="department">計上部門:</label><input type="text" id="department" name="department" required list="department-list" autocomplete="off"><datalist id="department-list"></datalist></div>
+<div class="form-group"><label for="account">勘定科目:</label><input type="text" id="account" name="account" required list="account-list"><datalist id="account-list"></datalist></div>
+<div class="form-group"><label for="pjc">対象PJC:</label><input type="text" id="pjc" name="pjc" list="pjc-list"><datalist id="pjc-list"></datalist></div>
+
+<div class="form-group">
+<label>対象期間:</label>
+<div class="period-group">
+  <input type="date" id="startDate" name="startDate" required>
+  <span>〜</span>
+  <input type="date" id="endDate" name="endDate" required>
+</div>
+</div>
+
+<div class="form-group"><label for="vendor">仕入先:</label><input type="text" id="vendor" name="vendor" list="vendor-list"></div>
+<datalist id="vendor-list"></datalist>
+
+<div class="form-group">
+<label for="notes">備考1:
+<small>※各月の按分金額等があれば記載してください</small>
+</label>
+<input type="text" id="notes" name="notes">
+</div>
+
+<div class="form-group"><label for="summary">発番理由:</label><input type="text" id="summary" name="summary" required></div>
+<button type="submit" id="update-button" >この内容で更新する</button>
+</form>
+
+<div id="message"></div>
+<a href="#" id="update-another" style="display:none; margin-top: 1rem; display: block; text-align: center;" >別のコードを更新する</a>
+
+</div>
+
+<div id="custom-modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title">入力エラー</div>
+    <div class="modal-text" id="modal-message"></div>
+    <div id="modal-buttons-ok" style="display: block;">
+      <button class="modal-button btn-ok" id="modal-ok-btn">OK</button>
+    </div>
+    <div id="modal-buttons-yesno" style="display: none; justify-content: center;">
+      <button class="modal-button btn-yes" id="modal-yes-btn">YES</button>
+      <button class="modal-button btn-no" id="modal-no-btn">NO</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ★【TODO】後ほどここに、完成した一括検索・更新ツール（bd-code-manager）の公開URLを設定します
+const MANAGER_APP_URL = "https://script.google.com/macros/s/ダミーURL/exec";
+
+const searchButton = document.getElementById('search-button');
+const updateForm = document.getElementById('update-form');
+const messageDiv = document.getElementById('message');
+const modalOverlay = document.getElementById('custom-modal');
+const modalMessage = document.getElementById('modal-message');
+const modalOkBtn = document.getElementById('modal-ok-btn');
+let modalCallback = null;
+
+const fieldValidations = [
+  { id: 'bu', list: 'bu-list', label: '対象BU' },
+  { id: 'department', list: 'department-list', label: '計上部門' },
+  { id: 'account', list: 'account-list', label: '勘定科目' },
+  { id: 'pjc', list: 'pjc-list', label: '対象PJC' },
+  { id: 'vendor', list: 'vendor-list', label: '仕入先' }
+];
+
+document.addEventListener('DOMContentLoaded', () => {
+  // 初期状態でリンクにURLをセットしておく
+  document.getElementById('manager-link').href = MANAGER_APP_URL;
+
+  google.script.url.getLocation(function(location) {
+    const bdCode = location.parameter.bdCode;
+    if (bdCode) {
+      const searchKeyInput = document.getElementById('search-key');
+      if (searchKeyInput) searchKeyInput.value = bdCode;
+    }
+  });
+
+  google.script.run.withSuccessHandler(populateDatalist('bu-list')).getBuSuggestions();
+  google.script.run.withSuccessHandler(populateDatalist('pjc-list')).getPjcSuggestions();
+  google.script.run.withSuccessHandler(populateDatalist('account-list')).getAccountSuggestions();
+  google.script.run.withSuccessHandler(populateDatalist('vendor-list')).getVendorSuggestions();
+  document.getElementById('bu').addEventListener('change', updateDepartmentSuggestions);
+  fieldValidations.forEach(v => setupStrictDatalist(v.id, v.list, v.label));
+
+  document.getElementById('account').addEventListener('change', function() {
+    const val = this.value.trim();
+    const updateButton = document.getElementById('update-button');
+    const targetAccounts = ['ｼｽﾃﾑ利用料_その他', 'ｻｰﾊﾞｰ_ｸﾗｳﾄﾞ利用料'];
+    
+    if (targetAccounts.includes(val)) {
+      const msg = '各クラウドサービス（AWS / GCP / Snowflake / Databricks / Azure）の費用は別途管理されており、MPコードの発番方法が異なります。\nこれらのクラウドサービスに含まれますか？';
+      showConfirmModal('確認', msg, 
+        () => {
+          const supportMsg = '詳細は <a href="https://supership.slack.com/archives/C092J9B5TRV" target="_blank">#support-fpa</a> にお問い合わせください。';
+          document.getElementById('modal-title').textContent = 'ご案内';
+          document.getElementById('modal-title').style.color = '#007bff';
+          document.getElementById('modal-message').innerHTML = supportMsg;
+          document.getElementById('modal-buttons-ok').style.display = 'block';
+          document.getElementById('modal-buttons-yesno').style.display = 'none';
+          modalCallback = null; 
+          updateButton.disabled = true;
+        },
+        () => {
+          updateButton.disabled = false;
+        }
+      );
+    } else {
+       updateButton.disabled = false;
+    }
+  });
+
+  modalOkBtn.addEventListener('click', () => {
+    modalOverlay.style.display = 'none';
+    if (modalCallback) {
+      modalCallback();
+      modalCallback = null;
+    }
+  });
+
+  searchButton.addEventListener('click', function() {
+    const searchKeyInput = document.getElementById('search-key');
+    const budgetCode = searchKeyInput.value.trim();
+    if (!budgetCode) {
+      showModal("MPコードを入力してください。", () => searchKeyInput.focus());
+      return;
+    }
+    searchButton.disabled = true;
+    searchButton.textContent = "検索中...";
+    messageDiv.style.display = 'none';
+    messageDiv.textContent = '';
+    updateForm.style.display = 'none';
+
+    google.script.run
+      .withSuccessHandler(function(response) {
+        searchButton.disabled = false;
+        searchButton.textContent = "検索";
+        if (response.error) {
+          showMessage(messageDiv, response.error, 'error');
+          messageDiv.style.display = 'block';
+          return;
+        }
+        document.getElementById('display-budget-code').textContent = budgetCode;
+        document.getElementById('budget-code').value = budgetCode;
+        document.getElementById('row-number').value = response.row;
+        
+        // ★ ここでリンク先のURLとテキストを動的に書き換える
+        const managerLink = document.getElementById('manager-link');
+        managerLink.href = `${MANAGER_APP_URL}?bdCode=${encodeURIComponent(budgetCode)}`;
+        managerLink.innerText = `一括検索・更新ツールで「${budgetCode}」の金額を修正する`;
+
+        document.getElementById('bu').value = response.data.bu || '';
+        const selectedBu = response.data.bu;
+        if (selectedBu) {
+             google.script.run.withSuccessHandler(populateDatalist('department-list')).getDepartmentSuggestions(selectedBu);
+        }
+        document.getElementById('department').value = response.data.department || '';
+        document.getElementById('account').value = response.data.account || '';
+        document.getElementById('pjc').value = response.data.pjc || '';
+        
+        // 金額は裏側(hidden)にセットして保持する
+        document.getElementById('amount').value = response.data.amount || '0';
+        
+        document.getElementById('startDate').value = response.data.startDate || '';
+        document.getElementById('endDate').value = response.data.endDate || '';
+        
+        document.getElementById('vendor').value = response.data.vendor || '';
+        document.getElementById('notes').value = response.data.notes || '';
+        
+        document.getElementById('summary').value = response.data.summary || '';
+        updateForm.style.display = 'block';
+        
+        document.getElementById('update-button').disabled = false;
+
+        showMessage(messageDiv, "データを取得しました。", 'success');
+        messageDiv.style.display = 'block';
+      })
+      .withFailureHandler(function(error) {
+        searchButton.disabled = false;
+        searchButton.textContent = "検索";
+        showMessage(messageDiv, "検索に失敗しました: " + error.message, 'error');
+        messageDiv.style.display = 'block';
+      })
+      .searchBudgetCode(budgetCode);
+  });
+});
+
+function showModal(message, callback, title = '入力エラー') {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-title').style.color = '#d9534f';
+  modalMessage.textContent = message; 
+  document.getElementById('modal-buttons-ok').style.display = 'block';
+  document.getElementById('modal-buttons-yesno').style.display = 'none';
+  modalCallback = callback;
+  modalOverlay.style.display = 'flex';
+}
+
+function showConfirmModal(title, message, onYes, onNo) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-title').style.color = '#333';
+  modalMessage.innerHTML = message; 
+  document.getElementById('modal-buttons-ok').style.display = 'none';
+  const yesnoDiv = document.getElementById('modal-buttons-yesno');
+  yesnoDiv.style.display = 'flex';
+  
+  const yesBtn = document.getElementById('modal-yes-btn');
+  const noBtn = document.getElementById('modal-no-btn');
+  
+  const newYesBtn = yesBtn.cloneNode(true);
+  const newNoBtn = noBtn.cloneNode(true);
+  yesBtn.parentNode.replaceChild(newYesBtn, yesBtn);
+  noBtn.parentNode.replaceChild(newNoBtn, noBtn);
+  
+  newYesBtn.addEventListener('click', () => { if (onYes) onYes(); });
+  newNoBtn.addEventListener('click', () => { modalOverlay.style.display = 'none'; if (onNo) onNo(); });
+  
+  modalOverlay.style.display = 'flex';
+}
+
+function setupStrictDatalist(inputId, datalistId, labelName) {
+  const input = document.getElementById(inputId);
+  input.addEventListener('change', function() {
+    const val = this.value.trim();
+    if (val === '') { this.classList.remove('input-error'); return; }
+    const datalist = document.getElementById(datalistId);
+    if (!datalist || datalist.options.length === 0) return;
+    const options = Array.from(datalist.options).map(opt => opt.value);
+    if (!options.includes(val)) {
+      this.classList.add('input-error');
+      showModal(`「${labelName}」はリストにある項目から選択してください。\n(入力された値: ${val})`, () => { setTimeout(() => input.focus(), 10); });
+    } else {
+      this.classList.remove('input-error');
+    }
+  });
+}
+
+function validateInputMatch(inputId, datalistId, labelName) {
+  const input = document.getElementById(inputId);
+  const val = input.value.trim();
+  const datalist = document.getElementById(datalistId);
+  if (val === '') {
+    input.classList.remove('input-error');
+    return { valid: true };
+  }
+  const options = Array.from(datalist.options).map(opt => opt.value);
+  if (!options.includes(val)) {
+    input.classList.add('input-error');
+    return { valid: false, message: `「${labelName}」はリストにある項目から選択してください。\n(入力された値: ${val})` };
+  }
+  input.classList.remove('input-error');
+  return { valid: true };
+}
+
+updateForm.addEventListener('submit', function(e) {
+  e.preventDefault();
+  for (const v of fieldValidations) {
+    const result = validateInputMatch(v.id, v.list, v.label);
+    if (!result.valid) {
+      showModal(result.message, () => document.getElementById(v.id).focus());
+      return;
+    }
+  }
+  const updateButton = document.getElementById('update-button');
+  updateButton.innerHTML = '<span class="spinner"></span>更新処理中...';
+  updateButton.disabled = true;
+  const waitMessageTimer = setTimeout(() => {
+    updateButton.innerHTML = '<span class="spinner"></span>アクセス集中、または外部連携に時間がかかっています。このままお待ちください...';
+  }, 25000);
+  
+  const formData = Object.fromEntries(new FormData(this).entries());
+  const rowNumber = document.getElementById('row-number').value;
+  
+  google.script.run
+  .withSuccessHandler(response => {
+    clearTimeout(waitMessageTimer);
+    showMessage(messageDiv, response.message, response.success ? 'success' : 'error');
+    if(response.success){
+      document.getElementById('update-another').style.display = 'block';
+    }
+    updateButton.innerHTML = 'この内容で更新する';
+    updateButton.disabled = false;
+  })
+  .withFailureHandler(err => {
+    clearTimeout(waitMessageTimer);
+    showMessage(messageDiv, '更新スクリプトの実行に失敗しました: ' + err.message, 'error');
+    updateButton.innerHTML = 'この内容で更新する';
+    updateButton.disabled = false;
+  })
+  .updateInfoData(formData, rowNumber);
+});
+
+document.getElementById('update-another').addEventListener('click', (e) => {
+  e.preventDefault();
+  updateForm.style.display = 'none';
+  showMessage(messageDiv, '', '');
+  document.getElementById('search-key').value = '';
+  // リンクも初期状態に戻す
+  document.getElementById('manager-link').href = MANAGER_APP_URL;
+  document.getElementById('manager-link').innerText = "一括検索・更新ツールを開く（ダミー）";
+});
+
+function showMessage(element, text, type) {
+  element.textContent = text;
+  element.className = type;
+}
+function populateDatalist(datalistId) {
+  return function(suggestions) {
+    const datalist = document.getElementById(datalistId);
+    datalist.innerHTML = '';
+    if (suggestions) {
+      suggestions.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        datalist.appendChild(option);
+      });
+    }
+  };
+}
+function updateDepartmentSuggestions() {
+  const selectedBu = document.getElementById('bu').value;
+  google.script.run.withSuccessHandler(populateDatalist('department-list')).getDepartmentSuggestions(selectedBu);
+}
+</script>
+</body>
+</html>
