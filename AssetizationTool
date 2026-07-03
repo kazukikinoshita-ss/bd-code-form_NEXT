@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f6f8; }
+    h2 { color: #333; }
+    .panel { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; background: #17a2b8; }
+    .btn:hover { background: #138496; }
+    .btn-search { background: #007bff; } .btn-search:hover { background: #0056b3; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-weight: bold; margin-bottom: 5px; }
+    input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+    #status { color: #007bff; font-weight: bold; margin-bottom: 15px; }
+    table { width: 100%; border-collapse: collapse; background: white; font-size: 0.9em; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f8f9fa; }
+    .ratio-input { width: 60px; padding: 4px; }
+    .error-text { color: red; font-size: 0.8em; display: none; }
+  </style>
+</head>
+<body>
+  <h2>資産化比率 入力ツール</h2>
+  <div class="panel">
+    <div class="form-group">
+      <label>対象MPコード (部分一致)</label>
+      <input type="text" id="mp-filter" placeholder="例: 000001">
+    </div>
+    <button class="btn btn-search" onclick="fetchData()">対象を検索</button>
+  </div>
+
+  <div id="status"></div>
+  
+  <div class="panel" id="results-panel" style="display:none;">
+    <button class="btn" onclick="saveData()">比率を保存する</button>
+    <br><br>
+    <table id="result-table">
+      <thead>
+        <tr>
+          <th>MPコード</th>
+          <th>一般科目</th>
+          <th>プロジェクト (PJC)</th>
+          <th>比率 (%)</th>
+          <th>合計チェック</th>
+        </tr>
+      </thead>
+      <tbody id="result-body"></tbody>
+    </table>
+  </div>
+
+  <script>
+    let currentData = [];
+    let pjcOptions = [];
+
+    window.onload = () => {
+      google.script.run.withSuccessHandler(res => { pjcOptions = res; }).getProjectSuggestionsTools();
+    };
+
+    function fetchData() {
+      const mpFilter = document.getElementById('mp-filter').value;
+      document.getElementById('status').textContent = "検索中...";
+      
+      const filters = { budgetCode: mpFilter, selectedCategories: [], selectedBUs: [] };
+      google.script.run.withSuccessHandler(res => {
+        if(res.error) { document.getElementById('status').textContent = res.error; return; }
+        currentData = res.data;
+        document.getElementById('status').textContent = `${currentData.length} 件の対象勘定が見つかりました。`;
+        renderTable();
+      }).fetchAssetizationData(filters);
+    }
+
+    function renderTable() {
+      const body = document.getElementById('result-body');
+      body.innerHTML = '';
+      currentData.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+        tr.dataset.idx = idx;
+        
+        const tdBd = document.createElement('td'); tdBd.textContent = item.bdCode;
+        const tdAc = document.createElement('td'); tdAc.textContent = item.account;
+        
+        const tdPjc = document.createElement('td');
+        const sel = document.createElement('select');
+        sel.className = 'pjc-select';
+        sel.add(new Option('--- 選択 ---', ''));
+        pjcOptions.forEach(p => sel.add(new Option(p.name, p.name)));
+        if(item.projects && item.projects.length > 0) sel.value = item.projects[0].project;
+        tdPjc.appendChild(sel);
+        
+        const tdRat = document.createElement('td');
+        const inp = document.createElement('input'); inp.type = 'number'; inp.className = 'ratio-input'; inp.min = '0'; inp.max = '100';
+        inp.value = (item.projects && item.projects.length > 0) ? item.projects[0].ratio : 0;
+        inp.oninput = () => checkTotal(tr);
+        tdRat.appendChild(inp);
+        
+        const tdChk = document.createElement('td');
+        tdChk.className = 'total-check';
+        const err = document.createElement('span'); err.className = 'error-text'; err.textContent = '※100%または0%にしてください';
+        tdChk.appendChild(err);
+
+        tr.appendChild(tdBd); tr.appendChild(tdAc); tr.appendChild(tdPjc); tr.appendChild(tdRat); tr.appendChild(tdChk);
+        body.appendChild(tr);
+        checkTotal(tr);
+      });
+      document.getElementById('results-panel').style.display = 'block';
+    }
+
+    function checkTotal(tr) {
+      const val = parseInt(tr.querySelector('.ratio-input').value || 0, 10);
+      const err = tr.querySelector('.error-text');
+      if(val !== 0 && val !== 100) { err.style.display = 'inline'; tr.style.backgroundColor = '#ffe6e6'; }
+      else { err.style.display = 'none'; tr.style.backgroundColor = 'transparent'; }
+    }
+
+    function saveData() {
+      const rows = document.querySelectorAll('#result-body tr');
+      let hasError = false;
+      const payload = [];
+      
+      rows.forEach(tr => {
+        const idx = tr.dataset.idx;
+        const pjc = tr.querySelector('.pjc-select').value;
+        const ratio = parseInt(tr.querySelector('.ratio-input').value || 0, 10);
+        if(ratio !== 0 && ratio !== 100) hasError = true;
+        
+        const item = currentData[idx];
+        const newData = { bdCode: item.bdCode, account: item.account, category: item.category, projects: [] };
+        if(pjc && ratio > 0) newData.projects.push({ project: pjc, ratio: ratio });
+        payload.push(newData);
+      });
+
+      if(hasError) { alert('比率が100%または0%になっていない行があります。修正してください。'); return; }
+
+      document.getElementById('status').textContent = "保存中...";
+      google.script.run.withSuccessHandler(res => {
+        document.getElementById('status').textContent = res;
+        alert('保存が完了しました。');
+      }).withFailureHandler(err => {
+        document.getElementById('status').textContent = "エラー: " + err.message;
+      }).saveAssetizationData(payload);
+    }
+  </script>
+</body>
+</html>
