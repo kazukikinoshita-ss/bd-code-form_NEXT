@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; background-color: #f8f9fa; color: #212529; }
+    
+    .header-nav { 
+      margin: 15px auto 0; 
+      max-width: 95%; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+    }
+    
+    .back-button { display: inline-block; text-decoration: none; font-size: 0.9rem; color: #fff; background-color: #6c757d; padding: 0.5rem 1rem; border-radius: 5px; transition: background-color 0.2s; }
+    .back-button:hover { background-color: #5a6268; color: #fff; }
+
+    .header-right-group { display: flex; align-items: center; gap: 15px; }
+    .last-updated { font-size: 12px; color: #6c757d; }
+    
+    .btn-header-reload {
+      font-size: 13px; 
+      padding: 4px 12px;
+      background-color: #6c757d; color: white;
+      border-radius: 5px; border: none; cursor: pointer;
+      font-weight: bold; 
+      display: inline-flex; 
+      align-items: center;
+      gap: 6px;
+      text-align: left;
+      line-height: 1.2;
+    }
+    .btn-header-reload:hover { background-color: #5a6268; }
+
+    .container { 
+      max-width: 95%; margin: 20px auto; 
+      background-color: #fff; padding: 25px; 
+      border-radius: 8px; border: 1px solid #dee2e6; 
+    }
+    
+    h1 { color: #343a40; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+    h3 { color: #495057; margin-top: 30px; border-bottom: 1px solid #dee2e6; padding-bottom: 5px;}
+    h5 { margin-top: 15px; margin-bottom: 5px; color: #495057; }
+    label { font-weight: bold; font-size: 14px; color: #495057; display: block; margin-bottom: 5px;}
+    
+    .filters { margin-bottom: 20px; padding: 20px; border: 1px solid #dee2e6; border-radius: 5px; background-color: #f8f9fa;}
+    .common-settings { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px dashed #ced4da; }
+    .budget-code-group { padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px dashed #ced4da; }
+    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; align-items: start; }
+    .filter-group { display: flex; flex-direction: column; }
+    .filter-group input[type="text"], .filter-group select { padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 16px; margin-top: 5px;}
+    .filter-group input[type="text"]:disabled { background-color: #e9ecef; cursor: not-allowed; }
+    .checkbox-container { max-height: 150px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: 4px; background-color: #fff; margin-top: 5px; }
+    .checkbox-item { display: flex; align-items: center; font-weight: normal; }
+    .select-all-label { display: block; padding-bottom: 5px; margin-bottom: 5px; border-bottom: 1px solid #e0e0e0; font-weight: bold; }
+    .filter-group-disabled { opacity: 0.5; pointer-events: none; }
+    .date-range-group { display: flex; gap: 10px; align-items: center; justify-content: flex-start; }
+    .date-range-group select { width: 150px; flex: 0 0 auto; padding: 6px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; margin-top: 5px; }
+    
+    button, .btn-update-link, .modal-button, .btn-reset { 
+      font-size: 16px; font-weight: bold; 
+      border-radius: 5px; border: none; cursor: pointer; 
+      transition: background-color 0.2s;
+      display: inline-flex; align-items: center; justify-content: center;
+      height: 45px; padding: 0 20px; box-sizing: border-box;
+      text-decoration: none; line-height: 1;
+    }
+    
+    .btn-primary { background-color: #007bff; color: white; }
+    .btn-secondary { background-color: #6c757d; color: white; }
+    .btn-secondary:hover { background-color: #5a6268; }
+    .btn-update-link { background-color: #17a2b8; color: #fff; }
+    .btn-update-link:hover { background-color: #138496; color: #fff; }
+    .btn-success { background-color: #28a745; color: white; }
+    .btn-success:hover { background-color: #218838; }
+    #update-all-button { background-color: #28a745; color: white; }
+    
+    .btn-reset { 
+      background-color: #f8f9fa; 
+      color: #6c757d; 
+      border: 1px solid #ced4da; 
+      font-size: 14px;
+    }
+    .btn-reset:hover { 
+      background-color: #e2e6ea; 
+    }
+
+    button:disabled { background-color: #adb5bd; cursor: not-allowed; }
+    
+    .button-group { display: flex; gap: 15px; margin-top: 20px; align-items: center; }
+
+    .results { display: none; }
+    
+    .result-card { 
+      border: 1px solid #dee2e6; 
+      border-radius: 5px; 
+      margin-bottom: 15px; 
+      background: #fff; 
+    }
+    
+    .result-header { display: flex; justify-content: space-between; align-items: center; background-color: #e9ecef; padding: 10px 15px; border-bottom: 1px solid #dee2e6; font-weight: bold; }
+    .result-header div { display: flex; gap: 10px; align-items: center; }
+    
+    .result-body { padding: 15px; }
+    .result-section { margin-bottom: 15px; }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+    .info-item label, .remark-item label { font-size: 12px; color: #6c757d; }
+    .info-item .value { font-size: 14px; word-wrap: break-word; }
+    
+    .info-item input, .info-item select { width: 100%; box-sizing: border-box; padding: 6px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; margin-top: 3px; }
+    .remark-item textarea { width: 100%; box-sizing: border-box; padding: 6px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; margin-top: 3px; resize: vertical; }
+    
+    .monthly-container { overflow-x: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: 4px; background-color: #f8f9fa; }
+    .monthly-items-wrapper { display: flex; gap: 15px; }
+    .monthly-item { flex: 0 0 150px; }
+    .mp-value-display { font-size: 11px; color: #007bff; margin-bottom: 2px; font-weight: bold; font-family: monospace; min-height: 16px;}
+    .value-display { font-size: 11px; color: #6c757d; margin-bottom: 3px; font-family: monospace;}
+    
+    .pagination-controls { margin-top: 15px; display: flex; justify-content: center; align-items: center; gap: 10px; }
+    .pagination-controls button { background-color: #6c757d; color: white; }
+    .pagination-controls button:disabled { background-color: #e9ecef; color: #6c757d; }
+    
+    .page-input { width: 50px; padding: 5px; text-align: center; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; margin: 0; }
+    
+    .page-size-selector { display: inline-flex; align-items: center; font-size: 14px; color: #495057; }
+    .page-size-selector select { margin-left: 5px; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; background-color: #fff; cursor: pointer; height: 45px; box-sizing: border-box; font-size: 16px; }
+
+    .loader { border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .loader-sm { border: 2px solid #f3f3f3; border-top: 2px solid #007bff; width: 10px; height: 10px; }
+    #status { font-size: 14px; padding: 10px; border-radius: 4px; margin-top: 15px; }
+    .status-success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; }
+    .status-error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; }
+    .filter-note { font-weight: normal; font-size: 0.85em; color: #6c757d; margin-left: 8px; }
+
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-box { background-color: #fff; padding: 25px; border-radius: 8px; border: 1px solid #dee2e6; width: 90%; max-width: 400px; text-align: center; animation: fadeIn 0.2s ease-out; }
+    .modal-title { font-size: 18px; font-weight: bold; color: #343a40; margin-bottom: 15px; }
+    .modal-text { font-size: 15px; color: #495057; margin-bottom: 25px; white-space: pre-wrap; line-height: 1.5; }
+    .modal-buttons { display: flex; justify-content: center; gap: 15px; }
+    .modal-button { background-color: #007bff; color: white; flex: 1; max-width: 120px; }
+    .modal-button:hover { background-color: #0056b3; }
+    .modal-button-cancel { background-color: #6c757d; color: white; }
+    .modal-button-cancel:hover { background-color: #5a6268; }
+
+    .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 2000; justify-content: center; align-items: center; flex-direction: column; color: white; }
+    .loading-box { text-align: center; }
+    .loading-text { margin-top: 15px; font-size: 18px; font-weight: bold; letter-spacing: 1px; white-space: pre-wrap; line-height: 1.5; }
+    .loader-lg { border: 6px solid #f3f3f3; border-top: 6px solid #007bff; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; display: inline-block; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+<div class="header-nav">
+  <a href="#" id="top-link" class="back-button">← メニューに戻る</a>
+  <div class="header-right-group">
+    <span id="last-updated-time" class="last-updated"></span>
+    <button id="reload-sheet-button" class="btn-header-reload" onclick="clearCache()" title="スプレッドシートの変更を反映します">
+      <span style="font-size: 16px;">🔄</span>
+      <span>
+        キャッシュクリア<br>
+        <span style="font-size: 10px; font-weight: normal;">(シートの値を再読込)</span>
+      </span>
+    </button>
+  </div>
+</div>
+
+<div class="container">
+  <h1>金額データ一括検索・更新ツール</h1>
+  <div class="filters">
+    <h3>1. 検索条件</h3>
+    <div class="common-settings">
+      <div class="filter-group">
+        <label>表示期間 (共通設定)</label>
+        <div class="date-range-group"><select id="start-date-select"></select><span>〜</span><select id="end-date-select"></select></div>
+      </div>
+    </div>
+    <div class="budget-code-group">
+      <label class="checkbox-item" style="font-weight: bold;"><input type="checkbox" id="use-budget-code-search"> MPコード検索を使用する</label>
+      <input type="text" id="budget-code-search" placeholder="MPコードを入力" disabled style="margin-top: 5px;">
+    </div>
+    <div class="filter-grid">
+      <div class="filter-group" id="bu-filter-group"><label>BU</label><div id="bu-filter-container">読み込み中...</div></div>
+      <div class="filter-group" id="dept-filter-group"><label>集約科目</label><div id="dept-filter-container">読み込み中...</div></div>
+      <div class="filter-group" id="other-filter-group">
+        <label>その他 (AND条件)<span class="filter-note">※選択した集約科目に存在するデータのみ候補に出ます</span></label>
+        <select id="other-column" style="padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 16px; margin-top: 5px;"></select>
+        <input type="text" id="other-keyword" placeholder="キーワードを入力" list="other-suggestions">
+        <datalist id="other-suggestions"></datalist>
+      </div>
+    </div>
+    <div class="button-group">
+      <button class="btn-reset" onclick="resetFilters()">条件リセット</button>
+      <div class="page-size-selector">
+          <span>表示件数:</span>
+          <select id="page-size-select" onchange="changePageSize(this.value)">
+              <option value="5">5件 (軽量)</option>
+              <option value="10" selected>10件 (推奨)</option>
+              <option value="20">20件</option>
+              <option value="50">50件 (重い)</option>
+          </select>
+      </div>
+      <button id="search-button" class="btn-primary" onclick="searchData()">この条件で検索</button>
+    </div>
+  </div>
+  <div id="status"></div>
+  <div class="results">
+    <h3>2. 検索結果</h3>
+    <div id="mp-data-error-area" style="margin-bottom: 10px; color: #dc3545; font-weight: bold;"></div>
+    
+    <div id="pagination-top" class="pagination-controls"></div>
+    <div id="result-area"></div>
+    <div id="pagination-bottom" class="pagination-controls"></div>
+    <div id="update-all-container" style="text-align: right; margin-top: 20px;">
+      <button id="update-all-button" class="btn-success" onclick="updateAllData()">表示されている結果をすべて更新</button>
+    </div>
+  </div>
+</div>
+
+<div id="custom-modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title">確認</div>
+    <div class="modal-text" id="modal-message"></div>
+    <div class="modal-buttons">
+      <button class="modal-button modal-button-cancel" id="modal-cancel-btn" style="display:none;">キャンセル</button>
+      <button class="modal-button" id="modal-ok-btn">OK</button>
+    </div>
+  </div>
+</div>
+
+<div id="loading-overlay" class="loading-overlay">
+  <div class="loading-box">
+    <div class="loader-lg"></div>
+    <div id="loading-message" class="loading-text">処理中...</div>
+  </div>
+</div>
+
+<script>
+let g_masterData = null;
+let PAGE_SIZE = 10;
+const SUGGESTION_LIMIT = 500; 
+const TIMEOUT_SEC = 60;
+
+let currentPage = 1;
+let allFilteredItems = [];
+let currentSearchDateRange = null;
+let webAppBaseUrl = '';
+let loadingTimer = null;
+let modalResolve = null;
+
+const searchButton = document.getElementById('search-button');
+const reloadSheetButton = document.getElementById('reload-sheet-button');
+const statusDiv = document.getElementById('status');
+const resultArea = document.getElementById('result-area');
+const resultsDiv = document.querySelector('.results');
+const paginationTopContainer = document.getElementById('pagination-top');
+const paginationBottomContainer = document.getElementById('pagination-bottom');
+const useBudgetCodeSearch = document.getElementById('use-budget-code-search');
+const budgetCodeInput = document.getElementById('budget-code-search');
+const mpDataErrorArea = document.getElementById('mp-data-error-area');
+const topLink = document.getElementById('top-link');
+const lastUpdatedTimeSpan = document.getElementById('last-updated-time');
+const loadingOverlay = document.getElementById('loading-overlay');
+const loadingMessageEl = document.getElementById('loading-message');
+
+function showModal(title, message) { setupModal(title, message, false); }
+function showModalAsync(title, message) { 
+  return new Promise((resolve) => { 
+    modalResolve = resolve; 
+    setupModal(title, message, false); 
+  }); 
+}
+function showConfirm(title, message) { return new Promise((resolve) => { modalResolve = resolve; setupModal(title, message, true); }); }
+
+function setupModal(title, message, isConfirm) {
+  document.getElementById('modal-title').innerText = title;
+  document.getElementById('modal-message').innerText = message;
+  const cancelBtn = document.getElementById('modal-cancel-btn');
+  const okBtn = document.getElementById('modal-ok-btn');
+  cancelBtn.style.display = isConfirm ? 'block' : 'none';
+  okBtn.onclick = () => closeModal(true);
+  cancelBtn.onclick = () => closeModal(false);
+  document.getElementById('custom-modal').style.display = 'flex';
+}
+function closeModal(result) {
+  document.getElementById('custom-modal').style.display = 'none';
+  if (modalResolve) { modalResolve(result); modalResolve = null; }
+}
+
+function updateLastSyncTime() {
+  if (!g_masterData || !g_masterData.generatedAt) {
+      lastUpdatedTimeSpan.innerText = "";
+      return;
+  }
+  const date = new Date(g_masterData.generatedAt);
+  const str = date.getFullYear() + "/" + 
+              ('0' + (date.getMonth() + 1)).slice(-2) + "/" + 
+              ('0' + date.getDate()).slice(-2) + " " + 
+              ('0' + date.getHours()).slice(-2) + ":" + 
+              ('0' + date.getMinutes()).slice(-2) + ":" + 
+              ('0' + date.getSeconds()).slice(-2);
+  lastUpdatedTimeSpan.innerText = "データ取得: " + str;
+}
+
+window.onload = function() {
+  setLoading(true, 'データを読み込んでいます...');
+  google.script.run.withSuccessHandler(url => { webAppBaseUrl = url; topLink.href = url; }).getWebAppUrl();
+  callGasFunction('getInitialMasterData', null, initData);
+};
+
+function callGasFunction(funcName, arg, successCallback) {
+  if (loadingTimer) clearTimeout(loadingTimer);
+  loadingTimer = setTimeout(() => {
+    setLoading(false);
+    showStatus('接続がタイムアウトしました。', true);
+  }, TIMEOUT_SEC * 1000);
+
+  const runner = google.script.run
+    .withSuccessHandler((res) => {
+      clearTimeout(loadingTimer);
+      try { successCallback(res); } 
+      catch (e) { setLoading(false); showStatus('画面描画エラー: ' + e.message, true); }
+    })
+    .withFailureHandler((err) => {
+      clearTimeout(loadingTimer);
+      setLoading(false);
+      showStatus('サーバーエラー: ' + err.message, true);
+    });
+
+  if (arg !== null) runner[funcName](arg); else runner[funcName]();
+}
+
+function initData(data) {
+  if(data.error) { showStatus(data.error, true); setLoading(false); return; }
+  g_masterData = data;
+  populateCheckboxes('bu-filter-container', data.bus);
+  populateCheckboxes('dept-filter-container', data.departments);
+  populateSelect('other-column', data.otherHeaders);
+  populateDateSelects(data.dateOptions, data.defaultStartDate, data.defaultEndDate);
+  useBudgetCodeSearch.addEventListener('change', handleSearchModeChange);
+  document.getElementById('bu-filter-container').addEventListener('change', handleFilterChange);
+  document.getElementById('dept-filter-container').addEventListener('change', (e) => {
+      if (!e.target.matches('.select-all-label input')) updateSuggestions();
+  });
+  document.getElementById('other-column').addEventListener('change', updateSuggestions);
+  updateSuggestions();
+  updateLastSyncTime();
+  setLoading(false);
+  showStatus('検索条件を入力してください。', false);
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  const bdCodeParam = urlParams.get('bdCode');
+  if(bdCodeParam) {
+    useBudgetCodeSearch.checked = true;
+    handleSearchModeChange();
+    budgetCodeInput.value = bdCodeParam;
+    searchData();
+  }
+}
+
+function updateSuggestions() {
+  if (!g_masterData) return;
+  const colName = document.getElementById('other-column').value;
+  const datalist = document.getElementById('other-suggestions');
+  datalist.innerHTML = '';
+  if (!colName) return;
+  const selectedSubjects = getSelectedCheckboxes('dept-filter-container');
+  const filteredIndex = g_masterData.searchIndex.filter(item => {
+    return selectedSubjects.length === 0 || selectedSubjects.includes(item.s);
+  });
+  const uniqueValues = new Set();
+  filteredIndex.forEach(item => { if (item.o && item.o[colName]) uniqueValues.add(item.o[colName]); });
+  const sortedValues = Array.from(uniqueValues).sort();
+  const displayValues = sortedValues.slice(0, SUGGESTION_LIMIT);
+  let optionsHtml = displayValues.map(val => `<option value="${val}"></option>`).join('');
+  datalist.innerHTML = optionsHtml;
+}
+
+function changePageSize(val) {
+  PAGE_SIZE = Number(val);
+  if (allFilteredItems.length > 0) { currentPage = 1; fetchPageData(); }
+}
+
+function resetFilters() {
+    ['bu-filter-container', 'dept-filter-container'].forEach(id => {
+        const container = document.getElementById(id);
+        const allCb = container.querySelector('.select-all-label input');
+        if (allCb) allCb.checked = true;
+        container.querySelectorAll('.checkbox-container input').forEach(cb => cb.checked = true);
+    });
+
+    useBudgetCodeSearch.checked = false;
+    budgetCodeInput.value = '';
+    handleSearchModeChange();
+
+    document.getElementById('other-column').value = '';
+    document.getElementById('other-keyword').value = '';
+    updateSuggestions();
+
+    if(g_masterData) {
+        document.getElementById('start-date-select').value = g_masterData.defaultStartDate;
+        document.getElementById('end-date-select').value = g_masterData.defaultEndDate;
+    }
+    
+    resultsDiv.style.display = 'none';
+    showStatus('検索条件をリセットしました。', false);
+}
+
+function searchData() {
+  const sDate = document.getElementById('start-date-select').value;
+  const eDate = document.getElementById('end-date-select').value;
+  if (sDate > eDate) { showModal('入力エラー', '表示期間が不正です。'); return; }
+
+  const budgetCode = document.getElementById('budget-code-search').value.trim().toLowerCase();
+  const selectedBus = getSelectedCheckboxes('bu-filter-container');
+  const selectedSubjects = getSelectedCheckboxes('dept-filter-container');
+  const otherCol = document.getElementById('other-column').value;
+  const otherKey = document.getElementById('other-keyword').value.toLowerCase();
+  const useBd = useBudgetCodeSearch.checked;
+
+  setLoading(true, '検索中...');
+  resultsDiv.style.display = 'none';
+  mpDataErrorArea.innerText = ''; 
+  
+  allFilteredItems = g_masterData.searchIndex.filter(item => {
+    if (useBd) return item.b.includes(budgetCode);
+    else {
+      if (selectedBus.length > 0 && !selectedBus.includes(item.u)) return false;
+      if (selectedSubjects.length > 0 && !selectedSubjects.includes(item.s)) return false;
+      if (otherCol && otherKey) {
+        if (!item.o[otherCol] || !item.o[otherCol].toLowerCase().includes(otherKey)) return false;
+      }
+      return true;
+    }
+  });
+
+  if (allFilteredItems.length === 0) { setLoading(false); showStatus('該当なし', false); return; }
+  currentSearchDateRange = { startDate: sDate, endDate: eDate };
+  currentPage = 1;
+  fetchPageData();
+}
+
+function fetchPageData() {
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const pageItems = allFilteredItems.slice(startIndex, startIndex + PAGE_SIZE).map(i => i.id);
+  setLoading(true, `詳細データを取得中... (${allFilteredItems.length}件中 ${currentPage}ページ目)`);
+  
+  google.script.run
+    .withSuccessHandler(jsonResponse => {
+      try {
+        const response = JSON.parse(jsonResponse);
+        displayResults(response, allFilteredItems.length);
+        loadMpDataBackground(response.searchResults);
+        setLoading(false); 
+      } catch(e) { setLoading(false); showStatus("エラー: " + e.message, true); }
+    })
+    .withFailureHandler(err => { setLoading(false); showStatus("通信エラー", true); })
+    .fetchPageDataForWebApp(pageItems, false, currentSearchDateRange);
+}
+
+function populateCheckboxes(id, list) {
+  const container = document.getElementById(id); container.innerHTML = '';
+  const allLabel = document.createElement('label'); allLabel.className='select-all-label';
+  const allCb = document.createElement('input'); allCb.type='checkbox'; allCb.checked=true;
+  allLabel.appendChild(allCb); allLabel.appendChild(document.createTextNode(' すべて選択/解除'));
+  container.appendChild(allLabel);
+  const div = document.createElement('div'); div.className='checkbox-container';
+  list.forEach(val => {
+    const l = document.createElement('label'); l.className='checkbox-item';
+    const cb = document.createElement('input'); cb.type='checkbox'; cb.value=val; cb.checked=true;
+    l.appendChild(cb); l.appendChild(document.createTextNode(' '+val));
+    div.appendChild(l);
+  });
+  container.appendChild(div);
+  allCb.addEventListener('change', e => {
+    div.querySelectorAll('input').forEach(c => c.checked = e.target.checked);
+    if(id==='dept-filter-container') updateSuggestions();
+  });
+  div.addEventListener('change', () => { if(id==='dept-filter-container') updateSuggestions(); });
+}
+
+function populateSelect(id, list) {
+  const s = document.getElementById(id); s.innerHTML = '<option value="">-- 選択 --</option>';
+  list.forEach(v => { const o=document.createElement('option'); o.value=v; o.text=v; s.appendChild(o); });
+}
+
+function populateDateSelects(dates, s, e) {
+  const sEl = document.getElementById('start-date-select'); const eEl = document.getElementById('end-date-select');
+  dates.forEach(d => {
+    sEl.add(new Option(d, d, false, d===s));
+    eEl.add(new Option(d, d, false, d===e));
+  });
+}
+
+function getSelectedCheckboxes(id) {
+  return Array.from(document.querySelectorAll(`#${id} .checkbox-container input:checked`)).map(c=>c.value);
+}
+
+function handleSearchModeChange() {
+  const on = useBudgetCodeSearch.checked;
+  budgetCodeInput.disabled = !on;
+  ['bu-filter-group','dept-filter-group','other-filter-group'].forEach(id => {
+    document.getElementById(id).classList.toggle('filter-group-disabled', on);
+  });
+}
+function handleFilterChange() { if(useBudgetCodeSearch.checked) { useBudgetCodeSearch.checked=false; handleSearchModeChange(); } }
+
+async function clearCache() {
+  const isOk = await showConfirm('確認', '最新データを読み込み直しますか？');
+  if(!isOk) return;
+  setLoading(true, 'キャッシュ情報を更新しています...\n※完了まで10〜20秒程度かかる場合があります。そのままお待ちください。');
+  
+  google.script.run
+    .withSuccessHandler(() => { 
+       setLoading(false);
+       
+       document.getElementById('modal-title').innerText = '完了';
+       document.getElementById('modal-message').innerText = 'キャッシュの削除が完了しました。\n以下のボタンを押して画面を再読み込みしてください。';
+       const cancelBtn = document.getElementById('modal-cancel-btn');
+       const okBtn = document.getElementById('modal-ok-btn');
+       
+       cancelBtn.style.display = 'none'; 
+       okBtn.innerText = '再読込'; 
+       
+       okBtn.onclick = () => {
+           okBtn.disabled = true;
+           okBtn.innerText = '読込中...';
+           
+           google.script.run.withSuccessHandler(url => {
+               window.top.location.href = url + '?page=tool'; 
+           }).getWebAppUrl();
+       };
+       
+       document.getElementById('custom-modal').style.display = 'flex';
+    })
+    .withFailureHandler((err) => {
+       setLoading(false);
+       showStatus("キャッシュクリアエラー: " + err.message, true);
+       alert("エラーが発生しました: " + err.message);
+    })
+    .clearAppCache();
+}
+
+function setLoading(b, msg='') {
+  searchButton.disabled = b;
+  reloadSheetButton.disabled = b;
+  if (b) {
+    loadingMessageEl.innerText = msg;
+    loadingOverlay.style.display = 'flex';
+  } else {
+    loadingOverlay.style.display = 'none';
+  }
+}
+
+function showStatus(msg, isErr) {
+  statusDiv.className = isErr ? 'status-error' : 'status-success';
+  statusDiv.innerHTML = msg; 
+}
+
+function displayResults(response, total) {
+  const { searchResults, monthlyHeaders, basicInfo, remarksInfo } = response;
+  resultArea.innerHTML = '';
+  resultsDiv.style.display = 'block';
+  window.currentBasicInfo = basicInfo;
+  window.currentRemarksInfo = remarksInfo;
+  window.currentMonthlyHeaders = monthlyHeaders;
+
+  let html = '';
+  searchResults.forEach(data => {
+    const bdCode = data['MPコード'] || '';
+    
+    // ★自身のURLを使ってリンクを作成
+    const updateLink = `${webAppBaseUrl}?page=update&bdCode=${encodeURIComponent(bdCode)}`;
+    
+    html += `<div class="result-card" id="result-${data.rowNumber}">`;
+    html += `<div class="result-header"><span>MPコード: ${bdCode} (Row: ${data.rowNumber})</span>`;
+    html += `<div>
+               <a href="${updateLink}" target="_blank" class="btn-update-link">MPコード登録情報</a>
+               <button class="btn-success" onclick="updateSingleItem(${data.rowNumber})">金額・備考更新</button>
+             </div></div>`;
+    
+    html += `<div class="result-body">`;
+    html += `<div class="result-section"><h5>基本情報</h5><div class="info-grid">`;
+    [...basicInfo.readOnly, ...basicInfo.editable].forEach(h => {
+        if(h==='MPコード') return;
+        html += `<div class="info-item"><label>${h}</label><div class="value">${data[h]||''}</div></div>`;
+    });
+    html += `</div></div>`;
+    html += `<div class="result-section"><h5>備考</h5><div class="info-grid">`;
+    remarksInfo.editable.forEach(h => {
+        html += `<div class="remark-item"><label>${h}</label><textarea id="input-${h}-${data.rowNumber}" data-original="${data[h]||''}">${data[h]||''}</textarea></div>`;
+    });
+    html += `</div></div>`;
+    html += `<div class="result-section"><h5>月額</h5><div class="monthly-container"><div class="monthly-items-wrapper">`;
+    monthlyHeaders.forEach(ts => {
+        const d = new Date(Number(ts));
+        const ym = `${d.getFullYear()}/${('0'+(d.getMonth()+1)).slice(-2)}`;
+        const val = (data[ts]!==undefined && data[ts]!==null) ? Number(data[ts]).toLocaleString() : '0';
+        html += `<div class="monthly-item"><label>${ym}</label>`;
+        html += `<div class="mp-value-display" id="mp-${data.rowNumber}-${ts}"><span class="loader-sm"></span> 読込中...</div>`;
+        html += `<div class="value-display">現在額: ${val}</div>`;
+        html += `<input type="number" id="input-${ts}-${data.rowNumber}" placeholder="更新額"></div>`;
+    });
+    html += `</div></div></div></div></div>`;
+  });
+  resultArea.innerHTML = html;
+  renderPagination(total);
+  showStatus(`${total}件中 ${((currentPage - 1) * PAGE_SIZE) + 1}〜${Math.min(((currentPage - 1) * PAGE_SIZE) + PAGE_SIZE, total)}件を表示`, false);
+}
+
+function renderPagination(total) {
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  let html = `<button onclick="goToPage(${currentPage-1})" ${currentPage===1?'disabled':''}>&lt;</button> `;
+  html += `<input type="number" class="page-input" value="${currentPage}" onchange="jumpToPage(this.value, ${totalPages})" min="1" max="${totalPages}">`;
+  html += `<span> / ${totalPages}</span> `;
+  html += `<button onclick="goToPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>&gt;</button>`;
+  paginationTopContainer.innerHTML = html;
+  paginationBottomContainer.innerHTML = html;
+}
+function goToPage(p) { currentPage = p; fetchPageData(); }
+function jumpToPage(val, max) {
+  let p = parseInt(val, 10);
+  if (isNaN(p) || p < 1) p = 1; if (p > max) p = max;
+  currentPage = p; fetchPageData();
+}
+
+async function updateSingleItem(rowNum) {
+  const updates = { rowNumber: rowNum };
+  let hasDiff = false;
+  window.currentRemarksInfo.editable.forEach(h => {
+      const el = document.getElementById(`input-${h}-${rowNum}`);
+      if(el && el.value !== el.dataset.original) { updates[h] = el.value; hasDiff = true; }
+  });
+  window.currentMonthlyHeaders.forEach(ts => {
+      const el = document.getElementById(`input-${ts}-${rowNum}`);
+      if(el && el.value !== '') { updates[ts] = el.value; hasDiff = true; }
+  });
+  if(!hasDiff) { showModal('通知', '変更がありません'); return; }
+  const isOk = await showConfirm('確認', '更新しますか？');
+  if(!isOk) return;
+  setLoading(true, '更新中...');
+  google.script.run.withSuccessHandler(async (msg) => {
+      setLoading(false);
+      await showModalAsync('完了', msg);
+      fetchPageData();
+  }).updateMultipleData([updates]);
+}
+
+async function updateAllData() {
+  const allUpdates = [];
+  document.querySelectorAll('.result-card').forEach(card => {
+      const rowNum = Number(card.id.split('-')[1]);
+      const updates = { rowNumber: rowNum };
+      let hasDiff = false;
+      window.currentRemarksInfo.editable.forEach(h => {
+          const el = document.getElementById(`input-${h}-${rowNum}`);
+          if(el && el.value !== el.dataset.original) { updates[h] = el.value; hasDiff = true; }
+      });
+      window.currentMonthlyHeaders.forEach(ts => {
+          const el = document.getElementById(`input-${ts}-${rowNum}`);
+          if(el && el.value !== '') { updates[ts] = el.value; hasDiff = true; }
+      });
+      if(hasDiff) allUpdates.push(updates);
+  });
+  if(allUpdates.length===0) { showModal('通知', '変更がありません'); return; }
+  const isOk = await showConfirm('確認', `${allUpdates.length}件 更新しますか？`);
+  if(!isOk) return;
+  setLoading(true, '一括更新中...');
+  google.script.run.withSuccessHandler(async (msg) => {
+      setLoading(false);
+      await showModalAsync('完了', msg);
+      fetchPageData();
+  }).updateMultipleData(allUpdates);
+}
+
+function loadMpDataBackground(results) {
+  if(!results.length) return;
+  const ids = results.map(r=>r.rowNumber);
+  const bds = results.map(r=>r['MPコード']);
+  
+  mpDataErrorArea.innerText = '';
+
+  google.script.run
+    .withSuccessHandler(res => {
+      if(res.error) { 
+          mpDataErrorArea.innerText = "外部データ取得エラー: " + res.error; 
+          return; 
+      }
+      const map = res.mpDataMap;
+      const label = res.mpSheetName;
+
+      ids.forEach((rNum, idx) => {
+          const dataForThisRow = map[rNum];
+
+          window.currentMonthlyHeaders.forEach(ts => {
+              const el = document.getElementById(`mp-${rNum}-${ts}`);
+              if(!el) return;
+
+              let displayVal = '';
+              let color = '#007bff';
+
+              if (dataForThisRow === undefined || dataForThisRow === "__NOT_FOUND__") {
+                  displayVal = '該当なし';
+              } else {
+                  const val = dataForThisRow[ts];
+                  if (val === null || val === undefined) {
+                      displayVal = '0';
+                  } else {
+                      displayVal = Number(val).toLocaleString();
+                  }
+              }
+
+              el.innerText = `${label}: ${displayVal}`;
+              el.style.color = color;
+              el.style.fontSize = '11px';
+          });
+      });
+  })
+  .withFailureHandler(err => {
+      mpDataErrorArea.innerText = "通信エラー(MPデータ): " + err.message;
+  })
+  .getMpDataOnly(ids, bds);
+}
+</script>
+</body>
+</html>
