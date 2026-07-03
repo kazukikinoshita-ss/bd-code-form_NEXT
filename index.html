@@ -7,9 +7,11 @@ body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 2rem; backgroun
 .header-nav { margin-bottom: 1rem; max-width: 700px; margin-left: auto; margin-right: auto; }
 .back-button { display: inline-block; text-decoration: none; font-size: 0.9rem; color: #fff; background-color: #6c757d; padding: 0.5rem 1rem; border-radius: 5px; transition: background-color 0.2s; }
 .back-button:hover { background-color: #5a6268; }
-.container { max-width: 700px; margin-left: auto; margin-right: auto;}
+/* ★修正: .container 自体に背景白・シャドウ・パディングを設定し、更新フォームと構造を完全に統一 */
+.container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 700px; margin-left: auto; margin-right: auto;}
 h1 { color: #444; }
-#myForm { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+/* ★追加: 更新フォームに合わせた説明文のスタイル */
+p.description { color: #666; font-size: 0.9rem; margin-top: -1rem; margin-bottom: 1.5rem; }
 .form-group { margin-bottom: 1rem; }
 label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
 label small { font-weight: normal; color: #666; display: block; margin-top: 4px;}
@@ -17,7 +19,7 @@ input { width: 100%; padding: 0.5rem; box-sizing: border-box; border: 1px solid 
 .period-group { display: flex; gap: 10px; align-items: center; }
 .period-group input { flex: 1; }
 
-/* ★月別金額入力用のスタイル（Qごとに3列表示） */
+/* 月別金額入力用のスタイル */
 .monthly-container { 
   background-color: #f0f7ff; 
   padding: 1.5rem; 
@@ -53,7 +55,7 @@ input { width: 100%; padding: 0.5rem; box-sizing: border-box; border: 1px solid 
 }
 .quarter-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 常に3列（3ヶ月分）で固定 */
+  grid-template-columns: repeat(3, 1fr);
   gap: 15px;
 }
 .monthly-item {
@@ -61,7 +63,7 @@ input { width: 100%; padding: 0.5rem; box-sizing: border-box; border: 1px solid 
   flex-direction: column;
 }
 .monthly-item.empty {
-  visibility: hidden; /* 対象期間外の月は場所だけ確保して非表示 */
+  visibility: hidden;
 }
 .monthly-item label { 
   font-size: 0.9rem; 
@@ -102,7 +104,6 @@ hr { border: none; border-top: 1px solid #eee; margin: 2rem 0; }
 .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-right: 10px; vertical-align: middle;}
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* カスタムモーダルのスタイル */
 .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
 .modal-box { background: white; padding: 2rem; border-radius: 8px; max-width: 400px; width: 90%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; }
 .modal-title { font-weight: bold; font-size: 1.2rem; margin-bottom: 1rem; color: #d9534f; }
@@ -116,86 +117,88 @@ hr { border: none; border-top: 1px solid #eee; margin: 2rem 0; }
 </head>
 <body>
 <div class="header-nav">
-<a href="<?= topUrl ?>" class="back-button" >← TOPに戻る</a>
+<a href="<?= topUrl ?>" class="back-button" target="_top">← TOPに戻る</a>
 </div>
+
 <div class="container">
-<h1>MPコード新規登録フォーム</h1>
-<form id="myForm">
-<div class="form-group">
-<label for="slideParentId">計画スライドの場合、親IDを指定（新規の場合は空欄）:
-<small>※親IDは 6 桁で入力してください</small>
-</label>
-<input type="text" id="slideParentId" name="slideParentId" placeholder="例: 000001" list="parent-id-list">
-<datalist id="parent-id-list"></datalist>
-</div>
-<hr>
-<h3>▼ 必須項目</h3>
-<div class="form-group">
-<label for="bu">対象BU:</label>
-<input type="text" id="bu" name="bu" required list="bu-list">
-<datalist id="bu-list"></datalist>
-</div>
-<div class="form-group">
-<label for="department">計上部門:</label>
-<input type="text" id="department" name="department" required list="department-list" placeholder="先に対象BUを選択してください" autocomplete="off">
-<datalist id="department-list"></datalist>
-</div>
-<div class="form-group">
-<label for="account">勘定科目:</label>
-<input type="text" id="account" name="account" required list="account-list">
-<datalist id="account-list"></datalist>
-</div>
-<div class="form-group">
-<label for="pjc">対象PJC:</label>
-<input type="text" id="pjc" name="pjc" list="pjc-list">
-<datalist id="pjc-list"></datalist>
-</div>
+  <h1>MPコード新規登録フォーム</h1>
+  <p class="description">ここでは「MPコードマスタ」の新規登録を行います。必須項目を正しく入力してください。</p>
+  
+  <form id="myForm">
+  <div class="form-group">
+  <label for="slideParentId">計画スライドの場合、親IDを指定（新規の場合は空欄）:
+  <small>※親IDは 6 桁で入力してください</small>
+  </label>
+  <input type="text" id="slideParentId" name="slideParentId" placeholder="例: 000001" list="parent-id-list">
+  <datalist id="parent-id-list"></datalist>
+  </div>
+  <hr>
+  <h3>▼ 必須項目</h3>
+  <div class="form-group">
+  <label for="bu">対象BU:</label>
+  <input type="text" id="bu" name="bu" required list="bu-list">
+  <datalist id="bu-list"></datalist>
+  </div>
+  <div class="form-group">
+  <label for="department">計上部門:</label>
+  <input type="text" id="department" name="department" required list="department-list" placeholder="先に対象BUを選択してください" autocomplete="off">
+  <datalist id="department-list"></datalist>
+  </div>
+  <div class="form-group">
+  <label for="account">勘定科目:</label>
+  <input type="text" id="account" name="account" required list="account-list">
+  <datalist id="account-list"></datalist>
+  </div>
+  <div class="form-group">
+  <label for="pjc">対象PJC:</label>
+  <input type="text" id="pjc" name="pjc" list="pjc-list">
+  <datalist id="pjc-list"></datalist>
+  </div>
 
-<div class="form-group">
-<label>対象期間:</label>
-<div class="period-group">
-  <input type="date" id="startDate" name="startDate" required onchange="generateMonthlyInputs()">
-  <span>〜</span>
-  <input type="date" id="endDate" name="endDate" required onchange="generateMonthlyInputs()">
-</div>
-</div>
+  <div class="form-group">
+  <label>対象期間:</label>
+  <div class="period-group">
+    <input type="date" id="startDate" name="startDate" required onchange="generateMonthlyInputs()">
+    <span>〜</span>
+    <input type="date" id="endDate" name="endDate" required onchange="generateMonthlyInputs()">
+  </div>
+  </div>
 
-<div class="form-group" id="monthly-amounts-area" style="display:none;">
-  <div class="monthly-container">
-    <div class="monthly-title">各月の金額を入力してください：</div>
-    <div id="monthly-grid">
+  <div class="form-group" id="monthly-amounts-area" style="display:none;">
+    <div class="monthly-container">
+      <div class="monthly-title">各月の金額を入力してください：</div>
+      <div id="monthly-grid"></div>
+      <div class="monthly-total">
+        合計: <span id="monthly-total-display">0</span> 円
       </div>
-    <div class="monthly-total">
-      合計: <span id="monthly-total-display">0</span> 円
     </div>
   </div>
-</div>
 
-<input type="hidden" id="amount" name="amount" required>
+  <input type="hidden" id="amount" name="amount" required>
 
-<div class="form-group">
-<label for="summary">発番理由:</label>
-<input type="text" id="summary" name="summary" required>
-</div>
+  <div class="form-group">
+  <label for="summary">発番理由:</label>
+  <input type="text" id="summary" name="summary" required>
+  </div>
 
-<h3>▼ 任意項目</h3>
-<div class="form-group">
-<label for="vendor">仕入先:</label>
-<input type="text" id="vendor" name="vendor" list="vendor-list">
-<datalist id="vendor-list"></datalist>
-</div>
+  <h3>▼ 任意項目</h3>
+  <div class="form-group">
+  <label for="vendor">仕入先:</label>
+  <input type="text" id="vendor" name="vendor" list="vendor-list">
+  <datalist id="vendor-list"></datalist>
+  </div>
 
-<div class="form-group">
-<label for="notes">備考1:
-<small>※各月の按分金額等があれば記載してください</small>
-</label>
-<input type="text" id="notes" name="notes">
-</div>
+  <div class="form-group">
+  <label for="notes">備考1:
+  <small>※各月の按分金額等があれば記載してください</small>
+  </label>
+  <input type="text" id="notes" name="notes">
+  </div>
 
-<button type="submit" id="submitButton" >登録する</button>
-</form>
-<div id="message" style="display:none;"></div>
-<a href="#" id="register-another" style="display:none; margin-top: 1rem; text-align: center; display: block;" >別のコードを登録する</a>
+  <button type="submit" id="submitButton" >登録する</button>
+  </form>
+  <div id="message" style="display:none;"></div>
+  <a href="#" id="register-another" style="display:none; margin-top: 1rem; text-align: center; display: block;" >別のコードを登録する</a>
 </div>
 
 <div id="custom-modal" class="modal-overlay">
@@ -281,25 +284,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// ★ 追加：入力された文字からカンマを取り除き、数値にする関数
 function parseNumber(value) {
   if (!value) return 0;
   const num = Number(value.toString().replace(/,/g, ''));
   return isNaN(num) ? 0 : num;
 }
 
-// ★ 追加：カンマ区切りにフォーマットしつつ、合計を計算する関数
 function formatAndCalculate(inputElement) {
-  // 1. 入力値からカンマと数字以外の文字を取り除く
   let val = inputElement.value.replace(/,/g, '').replace(/[^\d.-]/g, '');
-  
-  // 2. 数値としてパースしてカンマをつける（空なら0）
   if (val !== '' && val !== '-') {
     inputElement.value = Number(val).toLocaleString();
   } else {
     inputElement.value = val;
   }
-  
   calculateTotal();
 }
 
@@ -329,24 +326,22 @@ function generateMonthlyInputs() {
   
   while (current <= targetEnd) {
     const yyyy = current.getFullYear();
-    const m = current.getMonth() + 1; // 1〜12月
+    const m = current.getMonth() + 1; 
     const mm = String(m).padStart(2, '0');
     const ym = `${yyyy}/${mm}`;
     const ts = current.getTime();
     
-    // 会社独自の四半期（4月始まり）を計算
     const fiscalYear = m <= 3 ? yyyy - 1 : yyyy;
     let q = '';
-    let qIndex = 0; // そのQの中で何番目の月か (0=左, 1=中, 2=右)
+    let qIndex = 0; 
     
     if (m >= 4 && m <= 6)      { q = '1Q'; qIndex = m - 4; }
     else if (m >= 7 && m <= 9) { q = '2Q'; qIndex = m - 7; }
     else if (m >= 10 && m <= 12){ q = '3Q'; qIndex = m - 10; }
-    else                       { q = '4Q'; qIndex = m - 1; } // 1,2,3月
+    else                       { q = '4Q'; qIndex = m - 1; } 
     
     const qKey = `${fiscalYear}_${q}`;
     
-    // そのQのグループがまだ無ければ、土台を作る
     if (!qContainers[qKey]) {
       const qGroup = document.createElement('div');
       qGroup.className = 'quarter-group';
@@ -359,7 +354,6 @@ function generateMonthlyInputs() {
       const qGrid = document.createElement('div');
       qGrid.className = 'quarter-grid';
       
-      // 常に3枠作っておく
       for(let i = 0; i < 3; i++){
         const slot = document.createElement('div');
         slot.className = 'monthly-item empty';
@@ -392,9 +386,7 @@ function calculateTotal() {
   
   const formattedTotal = total.toLocaleString();
   document.getElementById('monthly-total-display').innerText = formattedTotal;
-  
-  // 申請金額欄（hidden）に合計をセット
-  document.getElementById('amount').value = total; // ここは数値のままセット
+  document.getElementById('amount').value = total; 
 }
 
 function showModal(message, callback, title = '入力エラー') {
@@ -510,11 +502,9 @@ myForm.addEventListener('submit', function(e) {
   submitButton.disabled = true;
   registerAnotherLink.style.display = 'none';
 
-  // ★送信時にカンマを外してクリーンな数値をGASに送る
   const formObject = Object.fromEntries(new FormData(this).entries());
   formObject.amount = parseNumber(formObject.amount);
   
-  // 動的に生成された月別金額 (monthly_***) のカンマも外す
   Object.keys(formObject).forEach(key => {
     if (key.startsWith('monthly_')) {
       formObject[key] = parseNumber(formObject[key]);
