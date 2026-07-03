@@ -6,7 +6,7 @@
 body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 2rem; background-color: #f9f9f9; color: #333; }
 .header-nav { margin-bottom: 1rem; max-width: 600px; margin-left: auto; margin-right: auto; }
 .back-button { display: inline-block; text-decoration: none; font-size: 0.9rem; color: #fff; background-color: #6c757d; padding: 0.5rem 1rem; border-radius: 5px; transition: background-color 0.2s; }
-.back-button:hover { background-color: #5a6268; }
+.back-button:hover { background-color: #6c757d; }
 .container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 600px; margin-left: auto; margin-right: auto;}
 h1 { color: #444; }
 p.description { color: #666; font-size: 0.9rem; margin-top: -1rem; margin-bottom: 1.5rem; }
@@ -28,7 +28,6 @@ hr { border: none; border-top: 1px solid #eee; margin: 2rem 0; }
 .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; margin-right: 10px; vertical-align: middle; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* 案内用メッセージのスタイル */
 .notice-box {
   background-color: #e9ecef;
   padding: 1rem;
@@ -52,7 +51,6 @@ hr { border: none; border-top: 1px solid #eee; margin: 2rem 0; }
   color: #0056b3;
 }
 
-/* カスタムモーダルのスタイル */
 .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
 .modal-box { background: white; padding: 2rem; border-radius: 8px; max-width: 400px; width: 90%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: center; }
 .modal-title { font-weight: bold; font-size: 1.2rem; margin-bottom: 1rem; color: #d9534f; }
@@ -66,7 +64,7 @@ hr { border: none; border-top: 1px solid #eee; margin: 2rem 0; }
 </head>
 <body>
 <div class="header-nav">
-<a href="<?= topUrl ?>" class="back-button" >← TOPに戻る</a>
+<a href="<?= topUrl ?>" class="back-button" target="_top">← TOPに戻る</a>
 </div>
 <div class="container">
 <h1>情報マスタ 更新フォーム</h1>
@@ -142,8 +140,8 @@ hr { border: none; border-top: 1px solid #eee; margin: 2rem 0; }
 </div>
 
 <script>
-// ★【TODO】後ほどここに、完成した一括検索・更新ツール（bd-code-manager）の公開URLを設定します
-const MANAGER_APP_URL = "https://script.google.com/macros/s/ダミーURL/exec";
+// ★修正: 動的に生成される「一括ツールリンク」のURLパラメータも、完全にホーム画面から引き継がれるベースURLを参照させます
+const MANAGER_APP_URL = "<?= topUrl ?>";
 
 const searchButton = document.getElementById('search-button');
 const updateForm = document.getElementById('update-form');
@@ -162,8 +160,7 @@ const fieldValidations = [
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 初期状態でリンクにURLをセットしておく
-  document.getElementById('manager-link').href = MANAGER_APP_URL;
+  document.getElementById('manager-link').href = `${MANAGER_APP_URL}?page=WebApp`;
 
   google.script.url.getLocation(function(location) {
     const bdCode = location.parameter.bdCode;
@@ -241,9 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('budget-code').value = budgetCode;
         document.getElementById('row-number').value = response.row;
         
-        // ★ ここでリンク先のURLとテキストを動的に書き換える
         const managerLink = document.getElementById('manager-link');
-        managerLink.href = `${MANAGER_APP_URL}?bdCode=${encodeURIComponent(budgetCode)}`;
+        managerLink.href = `${MANAGER_APP_URL}?page=WebApp&bdCode=${encodeURIComponent(budgetCode)}`;
         managerLink.innerText = `一括検索・更新ツールで「${budgetCode}」の金額を修正する`;
 
         document.getElementById('bu').value = response.data.bu || '';
@@ -255,7 +251,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('account').value = response.data.account || '';
         document.getElementById('pjc').value = response.data.pjc || '';
         
-        // 金額は裏側(hidden)にセットして保持する
         document.getElementById('amount').value = response.data.amount || '0';
         
         document.getElementById('startDate').value = response.data.startDate || '';
@@ -391,8 +386,7 @@ document.getElementById('update-another').addEventListener('click', (e) => {
   updateForm.style.display = 'none';
   showMessage(messageDiv, '', '');
   document.getElementById('search-key').value = '';
-  // リンクも初期状態に戻す
-  document.getElementById('manager-link').href = MANAGER_APP_URL;
+  document.getElementById('manager-link').href = `${MANAGER_APP_URL}?page=WebApp`;
   document.getElementById('manager-link').innerText = "一括検索・更新ツールを開く（ダミー）";
 });
 
