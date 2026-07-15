@@ -1,21 +1,25 @@
-// ===============================================
-// Code.gs v20.0 (サジェスト完全復旧・検索エラー解消版)
-// ===============================================
+// =========================================================================
+// Code.gs v22.4 (更新一括書き込み 爆速チューニング版)
+// 推奨バックアップファイル名: bd-code-form_NEXT_v22_4_20260715_1600.gs
+// =========================================================================
 
 const SPREADSHEET_ID = '12xNumVKAx5pp4eHMxn1iDZsBKw9_CjNqnducZeAbNqU'; // ★実際のIDに置き換えてください
 const SETTINGS_SHEET_NAME = '設定';
 const PROP_KEY_MAX_PARENT = 'CURRENT_MAX_PARENT_ID';
-
 const PROJECT_MASTER_SHEET_NAME = '[マスタ] Project Code';
 const ORG_BU_MASTER_SHEET_NAME = '[マスタ] 組織/BU（FY25）';
 const ACCOUNT_MASTER_SHEET_NAME = '[マスタ] 勘定科目';
+
+// ==== 💡 キャッシュ時間の設定（秒単位） ====
+const CACHE_TIME_MP = 3600;      // MPマスタデータのキャッシュ寿命（例: 3600 = 1時間）
+const CACHE_TIME_HEADERS = 1200; // シートのヘッダー列情報のキャッシュ寿命（例: 1200 = 20分）
+// ===========================================
 
 const MP_LINK_CELL = 'L1';
 const MP_SHEET_NAME_CELL = 'L2';
 const DATE_HEADER_ROW = 6; 
 const DATA_START_ROW = 7;
 const DEFAULT_MAX_COL_LIMIT = 'DL';
-
 const SEARCHABLE_COLUMN_NAMES = ["MPコード", "BU", "計上部門", "勘定科目", "対象PJC", "仕入先"];
 
 function onOpen() {
@@ -26,7 +30,7 @@ function onOpen() {
     .addItem('金額データ検索・更新ツール', 'openWebAppSidebar')
     .addSeparator()
     .addItem('【重要】初回設定(権限承認)', 'runAuthCheck')
-    .addItem('キャッシュクリア(再読込)', 'clearAppCache')
+    .addItem('キャッシュクリア(手動強制再読込)', 'clearAppCache')
     .addToUi();
 }
 
@@ -48,7 +52,6 @@ function doGet(e) {
   const page = e.parameter.page;
   let template, title;
   const baseUrl = ScriptApp.getService().getUrl();
-  
   if (page === 'tool' || page === 'WebApp') { template = HtmlService.createTemplateFromFile('WebApp'); title = '金額データ検索・更新'; } 
   else if (page === 'new') { template = HtmlService.createTemplateFromFile('index'); title = 'MPコード新規登録フォーム'; } 
   else if (page === 'update') { template = HtmlService.createTemplateFromFile('update'); title = '情報マスタ更新フォーム'; } 
@@ -72,13 +75,12 @@ function getSheetNames() {
   }
 }
 
-// 💡 10行目からのRoutingMap読み込み
 function getRouteMap() {
   try {
     const settingsSheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SETTINGS_SHEET_NAME);
     const lastRow = settingsSheet.getLastRow();
     if (lastRow < 10) return [];
-    const data = settingsSheet.getRange(10, 1, lastRow - 9, 5).getValues();
+    const data = settingsSheet.getRange(10, 1, lastRow - 9, 6).getValues();
     return data.filter(row => row[1] && String(row[1]).trim() !== ""); 
   } catch(e) { return []; }
 }
@@ -95,9 +97,9 @@ function getManagerSpreadsheet() {
   return SpreadsheetApp.openById(SPREADSHEET_ID);
 }
 
-// ===============================================
+// =========================================================================
 // Utils & 大容量キャッシュ
-// ===============================================
+// =========================================================================
 function formatDateFast(date) {
   if (!(date instanceof Date) || isNaN(date)) return "";
   const y = date.getFullYear();
@@ -106,23 +108,16 @@ function formatDateFast(date) {
   return `${y}/${m}/${d}`;
 }
 
-function getYearMonth(val) {
-  if (!val) return null;
-  let d = val;
-  if (!(d instanceof Date)) {
-    const t = new Date(val);
-    if (!isNaN(t.getTime())) d = t;
-    else return null;
-  }
-  return d.getFullYear() * 100 + (d.getMonth() + 1);
-}
-
 function safeString(val) {
   if (val instanceof Date) return formatDateFast(val);
   return (val === null || val === undefined) ? "" : String(val);
 }
 
-function safeNumber(val) { return (typeof val === 'number' && !isNaN(val)) ? val : 0; }
+function safeNumber(val) { 
+  if (val === null || val === undefined || val === '') return 0;
+  const num = Number(val);
+  return isNaN(num) ? 0 : num; 
+}
 
 function putCacheLarge(key, data, expirationInSeconds) {
   const cache = CacheService.getScriptCache();
@@ -163,25 +158,36 @@ function clearAppCache() {
   const keys = ["initialData_v20", "initialData_v20_count"];
   try {
     const routes = getRouteMap();
-    routes.forEach(r => keys.push("input_all_headers_v20_" + r[1]));
+    routes.forEach(r => {
+      keys.push("input_all_headers_v20_" + r[1]);
+      
+      const mpUrl = String(r[4] || "").trim();
+      const mpSheetName = String(r[3] || "").trim();
+      if (mpUrl && mpSheetName) {
+        const match = mpUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+        if (match) {
+          const mpSSId = match[1];
+          keys.push(`MP_CACHE_ALL_v22_${mpSSId}_${mpSheetName}`);
+          keys.push(`MP_CACHE_ALL_v22_${mpSSId}_${mpSheetName}_count`);
+        }
+      }
+    });
   } catch(e) {}
   try { cache.removeAll(keys); } catch(e) {}
-  return "キャッシュをクリアしました。";
+  SpreadsheetApp.getUi().alert("すべてのキャッシュ（ベースデータ・MPデータ）をクリアしました。\n次回起動時に最新のデータを再取得します。");
 }
 
 function getCachedHeaders(sheet) {
   const cacheKey = "input_all_headers_v20_" + sheet.getName();
   const cached = getCacheLarge(cacheKey);
   if (cached) return cached;
-  
   const lastColNum = Math.max(sheet.getLastColumn(), 50);
   const searchData = sheet.getRange(1, 1, Math.min(sheet.getLastRow() || 20, 20), lastColNum).getValues();
   let headerRowIdx = -1;
-  
   for (let i = 0; i < searchData.length; i++) {
     const rowStr = searchData[i].join("");
     if (rowStr.includes("MPコード") && (rowStr.includes("一般科目") || rowStr.includes("グループ名") || rowStr.includes("商品ファミリ"))) { 
-      headerRowIdx = i + 1; 
+      headerRowIdx = i + 1;
       break; 
     }
   }
@@ -194,21 +200,91 @@ function getCachedHeaders(sheet) {
       return { isDate: false };
   });
   const result = { mainHeaders, dateHeadersInfo, headerRowIndex: headerRowIdx };
-  putCacheLarge(cacheKey, result, 1200); 
+  
+  putCacheLarge(cacheKey, result, CACHE_TIME_HEADERS); 
   return result;
 }
 
-// ===============================================
-// WebApp用 API群
-// ===============================================
+// =========================================================================
+// MPマスタ用 永続キャッシュ管理エンジン
+// =========================================================================
+
+function refreshMpCache() {
+  const routes = getRouteMap();
+  const processedMp = new Set();
+  
+  routes.forEach(route => {
+    const mpSheetName = String(route[3] || "").trim();
+    const mpUrl = String(route[4] || "").trim();
+    if (!mpUrl || !mpSheetName) return;
+    
+    const match = mpUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+    if (!match) return;
+    const mpSSId = match[1];
+    
+    const cacheKey = `MP_CACHE_ALL_v22_${mpSSId}_${mpSheetName}`;
+    
+    if (processedMp.has(cacheKey)) return;
+    processedMp.add(cacheKey);
+    
+    try {
+      buildMpCache(mpSSId, mpSheetName, cacheKey);
+    } catch(e) {
+      console.warn(`[自動更新エラー] ${mpSheetName}: ` + e.message);
+    }
+  });
+}
+
+function buildMpCache(mpSSId, mpSheetName, cacheKey) {
+  const mpSheet = SpreadsheetApp.openById(mpSSId).getSheetByName(mpSheetName);
+  if (!mpSheet) throw new Error(`MPマスタ「${mpSheetName}」が見つかりません。`);
+  
+  const mpLastRow = mpSheet.getLastRow();
+  if (mpLastRow < DATA_START_ROW) return {};
+  
+  const response = Sheets.Spreadsheets.Values.get(mpSSId, `'${mpSheetName}'!A${DATA_START_ROW}:${DEFAULT_MAX_COL_LIMIT}${mpLastRow}`, { valueRenderOption: 'UNFORMATTED_VALUE' });
+  const mpResp = response.values;
+  
+  const mpDateHeaders = mpSheet.getRange(DATE_HEADER_ROW, 1, 1, mpSheet.getLastColumn()).getValues()[0];
+  const mpDateColIndices = [];
+  mpDateHeaders.forEach((d, idx) => {
+    if (d instanceof Date && !isNaN(d)) {
+      mpDateColIndices.push({ time: d.getTime(), colIdx: idx });
+    }
+  });
+  
+  const mpDataMapObj = {};
+  (mpResp || []).forEach(row => {
+    const bdCode = String(row[0] || "").trim().toLowerCase();
+    if (bdCode) {
+      const m = {};
+      mpDateColIndices.forEach(item => {
+        if (item.colIdx < row.length) {
+          const val = row[item.colIdx];
+          m[item.time] = (val === "" || val === null || val === undefined) ? null : Number(val);
+        } else {
+          m[item.time] = null;
+        }
+      });
+      mpDataMapObj[bdCode] = m;
+    }
+  });
+  
+  putCacheLarge(cacheKey, mpDataMapObj, CACHE_TIME_MP);
+  return mpDataMapObj;
+}
+
+// =========================================================================
+// Web API
+// =========================================================================
+
 function getInitialSettings() {
   let defStart = "", defEnd = "";
   try {
       const settingsSheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SETTINGS_SHEET_NAME);
-      // 💡 B7・B8からの日付取得に対応
       const vals = settingsSheet.getRange('B6:B8').getValues();
-      const sVal = vals[0][0] || vals[1][0]; // B6かB7にある開始日
-      const eVal = vals[1][0] || vals[2][0]; // B7かB8にある終了日
+      const sVal = vals[0][0] || vals[1][0];
+      const eVal = vals[1][0] || vals[2][0];
 
       if (sVal instanceof Date) defStart = formatDateFast(sVal).slice(0, 7).replace(/\//g, '-');
       else if (typeof sVal === 'string') defStart = sVal.replace(/\//g, '-'); 
@@ -221,7 +297,7 @@ function getInitialSettings() {
   return { routes: routeList, defaultStartDate: defStart, defaultEndDate: defEnd };
 }
 
-function getMasterDataByRouteIndex(routeIndex) {
+function getEntireSheetData(routeIndex) {
   const routes = getRouteMap();
   const route = routes[Number(routeIndex)];
   if (!route) throw new Error("指定されたシートが見つかりません。");
@@ -234,64 +310,251 @@ function getMasterDataByRouteIndex(routeIndex) {
       const defaultSS = SpreadsheetApp.openById(SPREADSHEET_ID);
       const accSheet = defaultSS.getSheetByName(ACCOUNT_MASTER_SHEET_NAME);
       if (accSheet && accSheet.getLastRow() >= 2) {
-          const accData = accSheet.getRange(2, 2, accSheet.getLastRow() - 1, 2).getValues(); 
+          const accData = accSheet.getRange(2, 2, accSheet.getLastRow() - 1, 2).getValues();
           accData.forEach(r => {
              if(String(r[1]).trim() && String(r[0]).trim()) accountMap.set(String(r[1]).trim(), String(r[0]).trim());
           });
       }
-  } catch (e) { }
+  } catch (e) { console.warn("勘定科目マスタ読み込み失敗: " + e.message); }
 
-  const searchIndex = [];
-  const groupSet = new Set(), subjectSet = new Set(), globalDatesSet = new Set();
-       
-  try {
-    let targetSS = (ssUrl && ssUrl.includes("spreadsheets")) ? SpreadsheetApp.openByUrl(ssUrl) : SpreadsheetApp.openById(SPREADSHEET_ID);
-    const sheet = targetSS.getSheetByName(sheetName);
-    if (!sheet) throw new Error(`シート「${sheetName}」が見つかりません。`);
+  let targetSS = (ssUrl && ssUrl.includes("spreadsheets")) ? SpreadsheetApp.openByUrl(ssUrl) : SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = targetSS.getSheetByName(sheetName);
+  if (!sheet) throw new Error(`シート「${sheetName}」が見つかりません。`);
 
-    const { mainHeaders, dateHeadersInfo, headerRowIndex } = getCachedHeaders(sheet);
-    
-    const bdCodeCol = mainHeaders.findIndex(h => h && h.includes("MPコード")); 
-    const deptCol = mainHeaders.findIndex(h => h && (h.includes("グループ名") || h.includes("商品ファミリ") || h.includes("計上部門"))); 
-    const accountCol = mainHeaders.findIndex(h => h && (h.includes("一般科目") || h.includes("勘定科目"))); 
-    const pjcCol = mainHeaders.findIndex(h => h && (h.includes("プロジェクト名") || h.includes("対象PJC") || h.includes("PJC")));
-    const vendorCol = mainHeaders.findIndex(h => h && h.includes("仕入先"));
+  const { mainHeaders, dateHeadersInfo, headerRowIndex } = getCachedHeaders(sheet);
+  const START_ROW = headerRowIndex + 1;
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
 
-    if (bdCodeCol === -1) throw new Error(`シート内に「MPコード」の列が見つかりません。`);
-    dateHeadersInfo.forEach(d => { if (d.isDate) globalDatesSet.add(formatDateFast(new Date(d.time)).slice(0, 7).replace(/\//g, '-')); });
+  if (lastRow < START_ROW) {
+    return { records: [], groups: [], subjects: [], otherHeaders: ["対象PJC", "仕入先", "一般科目"], dateOptions: [], remarksInfo: { editable: ["備考1","備考2","備考3","備考4"] } };
+  }
 
-    const START_ROW = headerRowIndex + 1;
-    const lastRow = sheet.getLastRow();
-    if (lastRow >= START_ROW) {
-      const data = sheet.getRange(START_ROW, 1, lastRow - START_ROW + 1, sheet.getLastColumn()).getValues();
+  const baseValues = sheet.getRange(START_ROW, 1, lastRow - START_ROW + 1, lastCol).getValues();
 
-      for (let i = 0; i < data.length; i++) {
-        const row = data[i];
-        const bdCode = String(row[bdCodeCol] || "").trim();
-        if (!bdCode) continue;
-
-        const groupVal = deptCol !== -1 ? String(row[deptCol] || "").trim() : "";
-        if(groupVal) groupSet.add(groupVal);
-
-        const accountVal = accountCol !== -1 ? String(row[accountCol] || "").trim() : "";
-        const subjectVal = accountMap.get(accountVal) || "その他"; 
-        subjectSet.add(subjectVal);
-
-        const globalId = `${routeIndex}___${i + START_ROW}`; 
-        const item = { id: globalId, g: groupVal, s: subjectVal, o: {} };
-        
-        if (pjcCol !== -1) item.o["対象PJC"] = String(row[pjcCol]).trim();
-        if (vendorCol !== -1) item.o["仕入先"] = String(row[vendorCol]).trim();
-        if (accountCol !== -1) item.o["一般科目"] = accountVal;
-        
-        searchIndex.push(item);
+  const mpSheetName = String(route[3] || "").trim();
+  const mpUrl = String(route[4] || "").trim();
+  const customMpLabel = String(route[5] || "").trim();
+  let displayLabel = customMpLabel || mpSheetName || 'MP';
+  
+  let mpDataMapObj = null;
+  const bdCodeCol = mainHeaders.findIndex(h => h && h.includes("MPコード"));
+  
+  if (mpUrl && mpSheetName && bdCodeCol !== -1) {
+    const match = mpUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+    if (match) {
+      const mpSSId = match[1];
+      const cacheKey = `MP_CACHE_ALL_v22_${mpSSId}_${mpSheetName}`;
+      
+      mpDataMapObj = getCacheLarge(cacheKey);
+      
+      if (!mpDataMapObj) {
+        try {
+          mpDataMapObj = buildMpCache(mpSSId, mpSheetName, cacheKey);
+        } catch (e) {
+          console.warn("MPキャッシュのオンデマンド構築に失敗: " + e.message);
+          mpDataMapObj = {};
+        }
       }
     }
-  } catch(e) { throw new Error(`シート読込失敗: ${e.message}`); }
+  }
+
+  const buCol = mainHeaders.findIndex(h => h && h.includes("BU")); 
+  const deptCol = mainHeaders.findIndex(h => h && (h.includes("グループ名") || h.includes("商品ファミリ") || h.includes("計上部門")));
+  const accountCol = mainHeaders.findIndex(h => h && (h.includes("一般科目") || h.includes("勘定科目")));
+  const pjcCol = mainHeaders.findIndex(h => h && (h.includes("プロジェクト名") || h.includes("対象PJC") || h.includes("PJC")));
+  const vendorCol = mainHeaders.findIndex(h => h && h.includes("仕入先"));
+
+  const remarkCols = [];
+  mainHeaders.forEach((h, c) => { if (h && h.startsWith("備考")) remarkCols.push({ header: h, colIdx: c }); });
+
+  const dateColMap = [];
+  dateHeadersInfo.forEach((d, idx) => { if (d.isDate) dateColMap.push({ time: d.time, colIdx: idx }); });
+
+  const records = [];
+  const groupSet = new Set(), subjectSet = new Set(), globalDatesSet = new Set();
+  dateHeadersInfo.forEach(d => { if (d.isDate) globalDatesSet.add(formatDateFast(new Date(d.time)).slice(0, 7).replace(/\//g, '-')); });
+
+  for (let i = 0; i < baseValues.length; i++) {
+    const rowValues = baseValues[i];
+    const bdCode = String(rowValues[bdCodeCol] || "").trim();
+    if (!bdCode) continue;
+
+    const bdCodeLower = bdCode.toLowerCase();
+    const groupVal = deptCol !== -1 ? String(rowValues[deptCol] || "").trim() : "";
+    if(groupVal) groupSet.add(groupVal);
+
+    const accountVal = accountCol !== -1 ? String(rowValues[accountCol] || "").trim() : "";
+    const subjectVal = accountMap.get(accountVal) || "その他"; 
+    subjectSet.add(subjectVal);
+
+    const globalId = `${routeIndex}___${i + START_ROW}`;
+    
+    const item = {
+      id: globalId,
+      rowNumber: globalId,
+      g: groupVal,
+      s: subjectVal,
+      "MPコード": bdCode,
+      "BU": buCol !== -1 ? safeString(rowValues[buCol]) : "",
+      "計上部門": groupVal,
+      "勘定科目": accountVal,
+      "対象PJC": pjcCol !== -1 ? safeString(rowValues[pjcCol]) : "",
+      "仕入先": vendorCol !== -1 ? safeString(rowValues[vendorCol]) : ""
+    };
+
+    remarkCols.forEach(rc => { item[rc.header] = safeString(rowValues[rc.colIdx]); });
+    dateColMap.forEach(dc => { item[dc.time] = safeNumber(rowValues[dc.colIdx]); });
+    
+    item.mpData = (mpDataMapObj && mpDataMapObj[bdCodeLower]) ? mpDataMapObj[bdCodeLower] : null;
+
+    records.push(item);
+  }
 
   const datesArray = Array.from(globalDatesSet).sort();
-  return { groups: Array.from(groupSet).sort(), subjects: Array.from(subjectSet).sort(), otherHeaders: ["対象PJC", "仕入先", "一般科目"], dateOptions: datesArray, searchIndex: searchIndex };
+  return {
+    records: records,
+    groups: Array.from(groupSet).sort(),
+    subjects: Array.from(subjectSet).sort(),
+    otherHeaders: ["対象PJC", "仕入先", "一般科目"],
+    dateOptions: datesArray,
+    remarksInfo: { readOnly: ["備考5"], editable: ["備考1", "備考2", "備考3", "備考4"] },
+    basicInfo: { readOnly: SEARCHABLE_COLUMN_NAMES, editable: [] },
+    mpSheetName: displayLabel
+  };
 }
+
+/**
+ * 💡 改修：競合チェックの爆速化（APIコールを100回から1回に削減）
+ */
+function updateMultipleDataWithConflictCheck(dataArray) {
+  if (!dataArray.length) return 'No Data';
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) throw new Error('他の人が編集中です。しばらくお待ちください。');
+
+  const routes = getRouteMap();
+  try {
+    const itemsByRoute = {};
+    dataArray.forEach(item => {
+      const parts = String(item.rowNumber).split("___");
+      const rIdx = parts[0];
+      if(!itemsByRoute[rIdx]) itemsByRoute[rIdx] = [];
+      const clonedItem = JSON.parse(JSON.stringify(item));
+      clonedItem.rowNumber = parseInt(parts[1], 10); 
+      itemsByRoute[rIdx].push(clonedItem);
+    });
+
+    for (const rIdxStr of Object.keys(itemsByRoute)) {
+      const rIdx = parseInt(rIdxStr, 10);
+      const route = routes[rIdx];
+      if(!route) continue;
+      
+      const sheetName = String(route[1]).trim();
+      const ssUrl = route[2];
+
+      let targetSS = (ssUrl && ssUrl.includes("spreadsheets")) ? SpreadsheetApp.openByUrl(ssUrl) : SpreadsheetApp.openById(SPREADSHEET_ID);
+      const sheet = targetSS.getSheetByName(sheetName);
+      if(!sheet) continue;
+
+      const { mainHeaders, dateHeadersInfo } = getCachedHeaders(sheet);
+      
+      const dateColIndices = {};
+      dateHeadersInfo.forEach((d, i) => { if (d.isDate) dateColIndices[d.time] = i; });
+      const b1Idx = mainHeaders.findIndex(h => h && h.includes("備考1"));
+      const b2Idx = mainHeaders.findIndex(h => h && h.includes("備考2"));
+      const b3Idx = mainHeaders.findIndex(h => h && h.includes("備考3"));
+      const b4Idx = mainHeaders.findIndex(h => h && h.includes("備考4"));
+      
+      const allowedCols = [b1Idx, b2Idx, b3Idx, b4Idx].filter(idx => idx !== -1);
+      const minAllowedCol = Math.min(...allowedCols, ...Object.values(dateColIndices));
+      const numCols = mainHeaders.length - minAllowedCol;
+      const colMap = { "備考1": b1Idx, "備考2": b2Idx, "備考3": b3Idx, "備考4": b4Idx };
+
+      const subItems = itemsByRoute[rIdxStr].sort((a, b) => a.rowNumber - b.rowNumber);
+      
+      // 💡 爆速化: 対象シート全体を1回だけメモリに読み込む (APIコールを極小化)
+      const allSheetValues = sheet.getDataRange().getValues();
+      const bdCodeCol = mainHeaders.findIndex(h => h && h.includes("MPコード"));
+      
+      // 競合チェックフェーズ (メモリ上の配列同士で高速比較)
+      for (const item of subItems) {
+        const rowNum = item.rowNumber; // 1始まりの行番号
+        const checkKeys = Object.keys(item.originals);
+        
+        const currentRowVals = allSheetValues[rowNum - 1];
+        if (!currentRowVals) {
+            throw new Error(`【更新エラー】対象レコードが見つかりません。`);
+        }
+        
+        for (const key of checkKeys) {
+          let colIdx = !isNaN(key) ? dateColIndices[parseInt(key, 10)] : colMap[key];
+          if (colIdx !== undefined && colIdx !== -1) {
+            // メモリから現在の値を取得
+            const currentCellVal = currentRowVals[colIdx];
+            const originalVal = item.originals[key];
+            
+            let isMatch = false;
+            if (!isNaN(key)) {
+              isMatch = (safeNumber(currentCellVal) === safeNumber(originalVal));
+            } else {
+              isMatch = (safeString(currentCellVal) === safeString(originalVal));
+            }
+            
+            if (!isMatch) {
+              const bdCode = bdCodeCol !== -1 ? currentRowVals[bdCodeCol] : "不明";
+              throw new Error(`【更新競合が発生しました】\nMPコード: ${bdCode}\nあなたが編集している間に他のユーザーがデータを変更しました。\n画面を再読み込みして再度編集を行ってください。`);
+            }
+          }
+        }
+      }
+
+      let currentGroup = [subItems[0]];
+      for(let i=1; i<subItems.length; i++) {
+        if(subItems[i].rowNumber === subItems[i-1].rowNumber + 1) currentGroup.push(subItems[i]);
+        else { 
+          processUpdateGroupNew(sheet, currentGroup, minAllowedCol + 1, numCols, minAllowedCol, colMap, dateColIndices); 
+          currentGroup = [subItems[i]];
+        }
+      }
+      processUpdateGroupNew(sheet, currentGroup, minAllowedCol + 1, numCols, minAllowedCol, colMap, dateColIndices);
+    }
+
+    return `${dataArray.length}件のデータを更新しました。`;
+  } finally { lock.releaseLock(); }
+}
+
+function processUpdateGroupNew(sheet, items, startCol, numCols, minAllowedCol, colMap, dateColIndices) {
+  const range = sheet.getRange(items[0].rowNumber, startCol, items.length, numCols), values = range.getValues();
+  items.forEach((item, i) => {
+    Object.keys(item.updates).forEach(key => {
+      let targetColIdx = !isNaN(key) ? dateColIndices[parseInt(key, 10)] : colMap[key];
+      if (targetColIdx !== undefined && targetColIdx !== -1) {
+        const rel = targetColIdx - minAllowedCol;
+        if (rel >= 0 && rel < numCols) {
+          values[i][rel] = (!isNaN(key) && item.updates[key] !== "") ? Number(item.updates[key]) : item.updates[key];
+        }
+      }
+    });
+  });
+  range.setValues(values);
+}
+
+function getRowGroupsWithTolerance(indices, tolerance) {
+  if (!indices || !indices.length) return [];
+  indices.sort((a, b) => a - b);
+  const groups = []; let start = indices[0], prev = indices[0];
+  for (let i = 1; i < indices.length; i++) {
+    if (indices[i] <= prev + 1 + tolerance) prev = indices[i];
+    else { groups.push({ start: start, numRows: prev - start + 1 }); start = indices[i]; prev = indices[i];
+    }
+  }
+  groups.push({ start: start, numRows: prev - start + 1 }); return groups;
+}
+
+// =========================================================================
+// 個別検索用
+// =========================================================================
+function getMasterDataByRouteIndex(routeIndex) { return getEntireSheetData(routeIndex); }
 
 function searchDataByMpCode(budgetCode, customDateRange) {
   const routes = getRouteMap();
@@ -302,7 +565,6 @@ function searchDataByMpCode(budgetCode, customDateRange) {
   for (let r = 0; r < routes.length; r++) {
     const sheetName = String(routes[r][1]).trim();
     const ssUrl = routes[r][2];
-
     try {
       let targetSS = (ssUrl && ssUrl.includes("spreadsheets")) ? SpreadsheetApp.openByUrl(ssUrl) : SpreadsheetApp.openById(SPREADSHEET_ID);
       const sheet = targetSS.getSheetByName(sheetName);
@@ -329,13 +591,12 @@ function searchDataByMpCode(budgetCode, customDateRange) {
 }
 
 function parseRowDataToItem(rowValues, routeIndex, rowNum, mainHeaders, dateHeadersInfo, customDateRange, globalMonthlyHeadersSet) {
-    const bdCodeCol = mainHeaders.findIndex(h => h && h.includes("MPコード")); 
+    const bdCodeCol = mainHeaders.findIndex(h => h && h.includes("MPコード"));
     const buCol = mainHeaders.findIndex(h => h && h.includes("BU")); 
-    const deptCol = mainHeaders.findIndex(h => h && (h.includes("グループ名") || h.includes("商品ファミリ") || h.includes("計上部門"))); 
-    const accountCol = mainHeaders.findIndex(h => h && (h.includes("一般科目") || h.includes("勘定科目"))); 
+    const deptCol = mainHeaders.findIndex(h => h && (h.includes("グループ名") || h.includes("商品ファミリ") || h.includes("計上部門")));
+    const accountCol = mainHeaders.findIndex(h => h && (h.includes("一般科目") || h.includes("勘定科目")));
     const pjcCol = mainHeaders.findIndex(h => h && (h.includes("プロジェクト名") || h.includes("対象PJC") || h.includes("PJC")));
     const vendorCol = mainHeaders.findIndex(h => h && h.includes("仕入先"));
-
     const dateColMap = new Map();
     dateHeadersInfo.forEach((d, idx) => {
       if (d.isDate) {
@@ -348,7 +609,6 @@ function parseRowDataToItem(rowValues, routeIndex, rowNum, mainHeaders, dateHead
         }
       }
     });
-
     const item = { rowNumber: `${routeIndex}___${rowNum}` };
     if (bdCodeCol !== -1) item["MPコード"] = safeString(rowValues[bdCodeCol]);
     if (buCol !== -1) item["BU"] = safeString(rowValues[buCol]);
@@ -362,72 +622,8 @@ function parseRowDataToItem(rowValues, routeIndex, rowNum, mainHeaders, dateHead
     return item;
 }
 
-function fetchPageDataForWebApp(globalRowIds, customDateRange) {
-  const routes = getRouteMap();
-  const results = [];
-  const globalMonthlyHeadersSet = new Set();
-  
-  const groupsByRoute = {};
-  globalRowIds.forEach(id => {
-    const parts = id.split("___");
-    if (parts.length < 2) return;
-    if (!groupsByRoute[parts[0]]) groupsByRoute[parts[0]] = [];
-    groupsByRoute[parts[0]].push(parseInt(parts[1], 10));
-  });
-
-  Object.keys(groupsByRoute).forEach(rIdxStr => {
-    const rIdx = parseInt(rIdxStr, 10);
-    const route = routes[rIdx];
-    if (!route) return;
-    
-    const sheetName = String(route[1]).trim();
-    const ssUrl = route[2];
-
-    try {
-      let targetSS = (ssUrl && ssUrl.includes("spreadsheets")) ? SpreadsheetApp.openByUrl(ssUrl) : SpreadsheetApp.openById(SPREADSHEET_ID);
-      const sheet = targetSS.getSheetByName(sheetName);
-      if (!sheet) return;
-
-      const { mainHeaders, dateHeadersInfo } = getCachedHeaders(sheet);
-      const sortedIndices = groupsByRoute[rIdxStr].sort((a,b) => a - b);
-      const groups = getRowGroupsWithTolerance(sortedIndices, 10);
-      const ssId = targetSS.getId();
-      
-      const ranges = groups.map(g => `'${sheetName}'!A${g.start}:${DEFAULT_MAX_COL_LIMIT}${g.start + g.numRows - 1}`);
-      const response = Sheets.Spreadsheets.Values.batchGet(ssId, { ranges: ranges, valueRenderOption: 'UNFORMATTED_VALUE', dateTimeRenderOption: 'SERIAL_NUMBER' });
-      const valueRanges = response.valueRanges || [];
-
-      groups.forEach((g, idx) => {
-        const blockValues = valueRanges[idx] ? valueRanges[idx].values : [];
-        if (!blockValues) return;
-        sortedIndices.forEach(targetRow => {
-            if (targetRow >= g.start && targetRow < g.start + g.numRows) {
-                const relativeIdx = targetRow - g.start;
-                // 💡 空行スキップによるエラーを防止
-                if (relativeIdx < blockValues.length && blockValues[relativeIdx]) {
-                    const item = parseRowDataToItem(blockValues[relativeIdx], rIdx, targetRow, mainHeaders, dateHeadersInfo, customDateRange, globalMonthlyHeadersSet);
-                    results.push(item);
-                }
-            }
-        });
-      });
-    } catch(e) { console.warn("Fetch Error: " + e.message); }
-  });
-
-  const sortedMonthlyHeaders = Array.from(globalMonthlyHeadersSet).sort((a,b) => a - b);
-  return JSON.stringify({ searchResults: results, monthlyHeaders: sortedMonthlyHeaders, basicInfo: { readOnly: SEARCHABLE_COLUMN_NAMES, editable: [] }, remarksInfo: { readOnly: ["備考5"], editable: ["備考1", "備考2", "備考3", "備考4"] } });
-}
-
-function getRowGroupsWithTolerance(indices, tolerance) {
-  if (!indices || !indices.length) return [];
-  indices.sort((a, b) => a - b);
-  const groups = []; let start = indices[0], prev = indices[0];
-  for (let i = 1; i < indices.length; i++) {
-    if (indices[i] <= prev + 1 + tolerance) prev = indices[i];
-    else { groups.push({ start: start, numRows: prev - start + 1 }); start = indices[i]; prev = indices[i]; }
-  }
-  groups.push({ start: start, numRows: prev - start + 1 }); return groups;
-}
+function fetchPageDataForWebApp(globalRowIds, customDateRange) { return ""; }
+function updateMultipleData(dataArray) { return updateMultipleDataWithConflictCheck(dataArray); }
 
 function getMpDataOnly(globalRowIds, bdCodes) {
   const res = {};
@@ -439,131 +635,37 @@ function getMpDataOnly(globalRowIds, bdCodes) {
     const route = routes[rIdx]; 
     if (!route) throw new Error("ルートマップに該当する行が存在しません。");
     
-    const mpSheetName = String(route[3] || "").trim(); 
+    const mpSheetName = String(route[3] || "").trim();
     const mpUrl = String(route[4] || "").trim();      
+    const customMpLabel = String(route[5] || "").trim();
+    const displayLabel = customMpLabel || mpSheetName || 'MP';
     
-    if (!mpUrl || !mpSheetName) {
-      return { mpDataMap: res, mpSheetName: 'MP', error: `設定シートのD/E列にMPマスタ情報が入力されていません。` };
-    }
+    if (!mpUrl || !mpSheetName) return { mpDataMap: res, mpSheetName: displayLabel, error: `設定シートのD/E列にMPマスタ情報が入力されていません。` };
 
     const match = mpUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-    if (!match) return { mpDataMap: res, mpSheetName: mpSheetName, error: `設定シートのMP参照用URLの形式が不正です。` };
+    if (!match) return { mpDataMap: res, mpSheetName: displayLabel, error: `設定シートのMP参照用URLの形式が不正です。` };
     const mpSSId = match[1];
     
-    const mpSheet = SpreadsheetApp.openById(mpSSId).getSheetByName(mpSheetName);
-    if (!mpSheet) return { mpDataMap: res, mpSheetName: mpSheetName, error: `MPマスタ「${mpSheetName}」が見つかりません。` };
-
-    const cBd = 0; 
-    const allBd = Sheets.Spreadsheets.Values.get(mpSSId, `'${mpSheetName}'!A${DATA_START_ROW}:A${mpSheet.getLastRow()}`).values.flat().map(String);
-    const bdMapObj = {};
-    allBd.forEach((bd, i) => { if(bd) bdMapObj[String(bd).trim().toLowerCase()] = i + DATA_START_ROW; });
+    const cacheKey = `MP_CACHE_ALL_v22_${mpSSId}_${mpSheetName}`;
+    let mpDataMapObj = getCacheLarge(cacheKey);
     
-    const targetIndices = [];
-    bdCodes.forEach(b => {
-        const mpRowIdx = bdMapObj[String(b).trim().toLowerCase()];
-        if (mpRowIdx) targetIndices.push(mpRowIdx);
-    });
-
-    const dateColMap = new Map();
-    const rawDateHeaders = mpSheet.getRange(DATE_HEADER_ROW, 1, 1, mpSheet.getLastColumn()).getValues()[0];
-    rawDateHeaders.forEach((d, idx) => { if(d instanceof Date && !isNaN(d)) dateColMap.set(d.getTime(), idx); });
-
-    const fetchedRows = new Map();
-    if (targetIndices.length > 0) {
-        const groups = getRowGroupsWithTolerance([...new Set(targetIndices)].sort((a,b)=>a-b), 200);
-        const mpResp = Sheets.Spreadsheets.Values.batchGet(mpSSId, { ranges: groups.map(g => `'${mpSheetName}'!A${g.start}:${DEFAULT_MAX_COL_LIMIT}${g.start + g.numRows - 1}`), valueRenderOption: 'UNFORMATTED_VALUE' });
-        (mpResp.valueRanges || []).forEach(vr => (vr.values || []).forEach(row => { 
-            if (row.length > cBd && row[cBd]) fetchedRows.set(String(row[cBd]).trim().toLowerCase(), row);
-        }));
+    if (!mpDataMapObj) {
+      mpDataMapObj = buildMpCache(mpSSId, mpSheetName, cacheKey);
     }
-
+    
     globalRowIds.forEach((gId, i) => {
         const bd = String(bdCodes[i]).trim().toLowerCase();
-        const row = fetchedRows.get(bd);
-        if (!row) { res[gId] = "__NOT_FOUND__"; return; }
-
-        const m = {};
-        Array.from(dateColMap.entries()).forEach(([timeMs, colIdx]) => {
-          if (colIdx < row.length) {
-              const val = row[colIdx];
-              m[timeMs] = (val === "" || val === null || val === undefined) ? null : Number(val);
-          } else { m[timeMs] = null; }
-        });
-        res[gId] = m;
+        const rowData = mpDataMapObj[bd];
+        if (!rowData) { res[gId] = "__NOT_FOUND__"; }
+        else { res[gId] = rowData; }
     });
-    return { mpDataMap: res, mpSheetName: mpSheetName, error: null };
+    return { mpDataMap: res, mpSheetName: displayLabel, error: null };
   } catch (e) { return { error: e.message }; }
 }
 
-function updateMultipleData(dataArray) {
-  if (!dataArray.length) return 'No Data';
-  const lock = LockService.getScriptLock();
-  if (!lock.tryLock(30000)) throw new Error('他の人が編集中です。しばらくお待ちください。');
-  const routes = getRouteMap();
-  try {
-    const itemsByRoute = {};
-    dataArray.forEach(item => {
-      const parts = String(item.rowNumber).split("___");
-      const rIdx = parts[0];
-      if(!itemsByRoute[rIdx]) itemsByRoute[rIdx] = [];
-      const clonedItem = JSON.parse(JSON.stringify(item));
-      clonedItem.rowNumber = parseInt(parts[1], 10); 
-      itemsByRoute[rIdx].push(clonedItem);
-    });
-
-    Object.keys(itemsByRoute).forEach(rIdxStr => {
-      const rIdx = parseInt(rIdxStr, 10);
-      const route = routes[rIdx];
-      if(!route) return;
-      
-      const sheetName = String(route[1]).trim();
-      const ssUrl = route[2];
-
-      let targetSS = (ssUrl && ssUrl.includes("spreadsheets")) ? SpreadsheetApp.openByUrl(ssUrl) : SpreadsheetApp.openById(SPREADSHEET_ID);
-      const sheet = targetSS.getSheetByName(sheetName);
-      if(!sheet) return;
-
-      const { mainHeaders, dateHeadersInfo } = getCachedHeaders(sheet);
-      const dateColIndices = {};
-      dateHeadersInfo.forEach((d, i) => { if (d.isDate) dateColIndices[d.time] = i; });
-      const b1Idx = mainHeaders.findIndex(h => h && h.includes("備考1"));
-      const b2Idx = mainHeaders.findIndex(h => h && h.includes("備考2"));
-      const b3Idx = mainHeaders.findIndex(h => h && h.includes("備考3"));
-      const b4Idx = mainHeaders.findIndex(h => h && h.includes("備考4"));
-      
-      const allowedCols = [b1Idx, b2Idx, b3Idx, b4Idx].filter(idx => idx !== -1);
-      const minAllowedCol = Math.min(...allowedCols, ...Object.values(dateColIndices));
-      const numCols = mainHeaders.length - minAllowedCol;
-      const colMap = { "備考1": b1Idx, "備考2": b2Idx, "備考3": b3Idx, "備考4": b4Idx };
-
-      const subItems = itemsByRoute[rIdxStr].sort((a, b) => a.rowNumber - b.rowNumber);
-      let currentGroup = [subItems[0]];
-      for(let i=1; i<subItems.length; i++) {
-        if(subItems[i].rowNumber === subItems[i-1].rowNumber + 1) currentGroup.push(subItems[i]);
-        else { processUpdateGroup(sheet, currentGroup, minAllowedCol + 1, numCols, minAllowedCol, colMap, dateColIndices); currentGroup = [subItems[i]]; }
-      }
-      processUpdateGroup(sheet, currentGroup, minAllowedCol + 1, numCols, minAllowedCol, colMap, dateColIndices);
-    });
-
-    return `${dataArray.length}件のデータを更新しました。`;
-  } finally { lock.releaseLock(); }
-}
-
-function processUpdateGroup(sheet, items, startCol, numCols, minAllowedCol, colMap, dateColIndices) {
-  const range = sheet.getRange(items[0].rowNumber, startCol, items.length, numCols), values = range.getValues();
-  items.forEach((item, i) => {
-    Object.keys(item).forEach(key => {
-      if (key === 'rowNumber') return;
-      let targetColIdx = !isNaN(key) ? dateColIndices[parseInt(key, 10)] : colMap[key];
-      if (targetColIdx !== undefined && targetColIdx !== -1) {
-        const rel = targetColIdx - minAllowedCol;
-        if (rel >= 0 && rel < numCols) values[i][rel] = (!isNaN(key) && item[key] !== "") ? Number(item[key]) : item[key];
-      }
-    });
-  });
-  range.setValues(values);
-}
-
+// =========================================================================
+// その他機能 (互換性維持)
+// =========================================================================
 function searchBudgetCode(budgetCode) {
   try {
     const sheetNames = getSheetNames();
@@ -603,7 +705,6 @@ function updateInfoData(formData, rowNumber) {
   } catch (e) { return { success: false, message: "更新中にエラーが発生しました: " + e.message }; } finally { lock.releaseLock(); }
 }
 
-// 💡 修正：サジェスト構築時のガード条件を完全復旧（クラッシュ防止）
 function getBuSuggestions() {
   try {
     const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName('[マスタ]BUインポート');
@@ -713,10 +814,8 @@ function processForm(formObject) {
     const formattedParentId = ('000000' + newParentId).slice(-6);
     const formattedChildId = ('000' + newChildId).slice(-3);
     const budgetCode = `${formattedParentId}_${formattedChildId}`;
-    
     budgetSheet.appendRow(["'" + budgetCode, "'" + formattedParentId, "'" + formattedChildId, registrationTime, endDate, userEmail]);
     infoSheet.appendRow(["'" + budgetCode, formObject.bu, formObject.department, formObject.account, formObject.pjc, formObject.vendor, formObject.summary, isSlide ? "Yes" : "", registrationTime, userEmail, formObject.amount, formObject.notes, formObject.startDate, formObject.endDate]);
-
     const targetUrl = formObject.targetUrl;
     const targetSheetName = formObject.targetSheetName;
     if (!targetSheetName) throw new Error("書き込み先のInputシート名が選択されていません。");
@@ -737,7 +836,7 @@ function processForm(formObject) {
     fill("グループ名", formObject.department);         
     fill("一般科目", formObject.account);              
     fill("プロジェクト名", formObject.pjc);            
-    fill("仕入先", formObject.vendor);                 
+    fill("仕入先", formObject.vendor);
     fill("備考1", formObject.summary); 
     fill("備考3", formObject.notes);   
 
@@ -766,6 +865,5 @@ function processForm(formObject) {
     inputSheet.getRange(insertRow, 1, 1, newRowData.length).setValues([newRowData]);
     SpreadsheetApp.flush();
     return { success: true, message: `登録完了しました。\n新しいMPコード: ${budgetCode}` };
-  } catch (e) { return { success: false, message: 'エラーが発生しました: ' + e.message };
-  } finally { lock.releaseLock(); }
+  } catch (e) { return { success: false, message: 'エラーが発生しました: ' + e.message }; } finally { lock.releaseLock(); }
 }
