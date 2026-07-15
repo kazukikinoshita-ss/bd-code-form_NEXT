@@ -2,6 +2,7 @@
 <html>
 <head>
   <base target="_top">
+  <meta charset="UTF-8">
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; background-color: #f8f9fa; color: #212529; }
     .header-nav { margin: 15px auto 0; max-width: 95%; display: flex; justify-content: space-between; align-items: center; }
@@ -50,8 +51,7 @@
     .monthly-item label { font-size: 12px; color: #007bff; font-weight: bold; }
     .value-display { font-size: 11px; color: #6c757d; margin-bottom: 3px; font-family: monospace;}
     .mp-value-display { font-size: 11px; color: #007bff; margin-bottom: 2px; font-weight: bold; font-family: monospace; min-height: 16px;}
-    .loader-sm { border: 2px solid #f3f3f3; border-top: 2px solid #007bff; width: 10px; height: 10px; border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; }
-
+    
     .pagination-controls { margin-top: 15px; display: flex; justify-content: center; align-items: center; gap: 10px; }
     .page-input { width: 50px; padding: 5px; text-align: center; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; }
     #status { font-size: 14px; padding: 10px; border-radius: 4px; margin-top: 15px; }
@@ -82,7 +82,7 @@
     </div>
 
     <div class="sheet-select-area" id="sheet-select-area">
-      <label>▼ まず最初に対象のシートを選択してください</label>
+      <label>▼ まず最初に対象 of シートを選択してください</label>
       <select id="sheet-select" onchange="loadSheetData()">
         <option value="">-- シートの読み込み中... --</option>
       </select>
@@ -144,7 +144,11 @@
 </div>
 
 <script>
-let g_masterData = null; let PAGE_SIZE = 10; let currentPage = 1; let allFilteredItems = []; let currentSearchDateRange = null;
+let g_masterData = null; 
+let PAGE_SIZE = 10; 
+let currentPage = 1; 
+let allFilteredItems = []; 
+let currentSearchDateRange = null;
 
 window.onload = function() {
   setLoading(true, '初期設定を読み込んでいます...');
@@ -161,7 +165,7 @@ function initSettings(settings) {
   settings.routes.forEach(r => {
     const opt = document.createElement('option'); 
     opt.value = r.index; 
-    opt.text = r.sheet; // 💡 修正：サジェストからBU表記を完全に排除
+    opt.text = r.sheet; 
     sheetSelect.appendChild(opt);
   });
   if (settings.defaultStartDate) document.getElementById('start-date-select').value = settings.defaultStartDate;
@@ -173,57 +177,110 @@ function handleSearchModeChange() {
   const on = document.getElementById('use-budget-code-search').checked;
   document.getElementById('budget-code-search').disabled = !on;
   if (on) {
-    document.getElementById('sheet-select-area').style.display = 'none'; document.getElementById('filter-grid-area').style.display = 'none';
-    document.getElementById('common-settings-area').style.display = 'block'; document.getElementById('search-btn-area').style.display = 'block';
+    document.getElementById('sheet-select-area').style.display = 'none'; 
+    document.getElementById('filter-grid-area').style.display = 'none';
+    document.getElementById('common-settings-area').style.display = 'block'; 
+    document.getElementById('search-btn-area').style.display = 'block';
     document.querySelector('.results').style.display = 'none';
   } else {
-    document.getElementById('sheet-select-area').style.display = 'block'; document.getElementById('budget-code-search').value = '';
+    document.getElementById('sheet-select-area').style.display = 'block'; 
+    document.getElementById('budget-code-search').value = '';
     loadSheetData(); 
   }
 }
 
+/**
+ * 💡 新設計：シートを選択した1回だけ、すべてのベースレコードとMPレコードを合流させてロードします。
+ */
 function loadSheetData() {
   const selectedRouteIndex = document.getElementById('sheet-select').value;
   if (selectedRouteIndex === "") {
-    document.getElementById('common-settings-area').style.display = 'none'; document.getElementById('filter-grid-area').style.display = 'none';
-    document.getElementById('search-btn-area').style.display = 'none'; document.querySelector('.results').style.display = 'none'; return;
+    document.getElementById('common-settings-area').style.display = 'none'; 
+    document.getElementById('filter-grid-area').style.display = 'none';
+    document.getElementById('search-btn-area').style.display = 'none'; 
+    document.querySelector('.results').style.display = 'none'; 
+    return;
   }
-  setLoading(true, `指定シートデータの読み込み・解析中...`);
+  setLoading(true, `指定シートデータの高速一括ロード・JOIN解析中 (最大3000行)...`);
   google.script.run
     .withSuccessHandler(data => {
-      g_masterData = data;
-      populateCheckboxes('dept-filter-container', data.groups); populateCheckboxes('subject-filter-container', data.subjects); populateSelect('other-column', data.otherHeaders);
-      document.getElementById('common-settings-area').style.display = 'block'; document.getElementById('filter-grid-area').style.display = 'grid'; document.getElementById('search-btn-area').style.display = 'block'; document.querySelector('.results').style.display = 'none';
-      document.getElementById('dept-filter-container').addEventListener('change', updateSuggestions); document.getElementById('other-column').addEventListener('change', updateSuggestions);
-      updateSuggestions(); setLoading(false); showStatus('サジェストの構築が完了しました。条件を指定して検索してください。', false);
+      g_masterData = data; // すべての結合データがブラウザのメモリにキャッシュされます
+      
+      populateCheckboxes('dept-filter-container', data.groups); 
+      populateCheckboxes('subject-filter-container', data.subjects); 
+      populateSelect('other-column', data.otherHeaders);
+      
+      document.getElementById('common-settings-area').style.display = 'block'; 
+      document.getElementById('filter-grid-area').style.display = 'grid'; 
+      document.getElementById('search-btn-area').style.display = 'block'; 
+      document.querySelector('.results').style.display = 'none';
+      
+      document.getElementById('dept-filter-container').removeEventListener('change', updateSuggestions);
+      document.getElementById('other-column').removeEventListener('change', updateSuggestions);
+      
+      document.getElementById('dept-filter-container').addEventListener('change', updateSuggestions); 
+      document.getElementById('other-column').addEventListener('change', updateSuggestions);
+      
+      updateSuggestions(); 
+      setLoading(false); 
+      showStatus('ロードおよびメモリ格納が完了しました。フィルタはミリ秒単位で高速検索できます。', false);
     })
     .withFailureHandler(err => { setLoading(false); showStatus('シート読込失敗: ' + err.message, true); })
-    .getMasterDataByRouteIndex(selectedRouteIndex); 
+    .getEntireSheetData(selectedRouteIndex); 
 }
 
 function updateSuggestions() {
   if (!g_masterData) return;
-  const colName = document.getElementById('other-column').value; const datalist = document.getElementById('other-suggestions'); datalist.innerHTML = ''; if (!colName) return;
+  const colName = document.getElementById('other-column').value; 
+  const datalist = document.getElementById('other-suggestions'); 
+  datalist.innerHTML = ''; 
+  if (!colName) return;
   const selectedGroups = getSelectedCheckboxes('dept-filter-container');
-  const filteredIndex = g_masterData.searchIndex.filter(item => { return selectedGroups.length === 0 || selectedGroups.includes(item.g); });
-  const uniqueValues = new Set(); filteredIndex.forEach(item => { if (item.o && item.o[colName]) uniqueValues.add(item.o[colName]); });
+  const filteredIndex = g_masterData.records.filter(item => { return selectedGroups.length === 0 || selectedGroups.includes(item.g); });
+  const uniqueValues = new Set(); 
+  filteredIndex.forEach(item => { if (item[colName]) uniqueValues.add(item[colName]); });
   Array.from(uniqueValues).sort().slice(0, 500).forEach(val => { datalist.innerHTML += `<option value="${val}"></option>`; });
 }
 
+/**
+ * 💡 新設計：検索ボタンを押した瞬間、「ゼロ秒（ミリ秒単位）」でブラウザ上でフィルタリングを実行します。
+ */
 function searchData() {
-  const sDate = document.getElementById('start-date-select').value; const eDate = document.getElementById('end-date-select').value;
+  const sDate = document.getElementById('start-date-select').value; 
+  const eDate = document.getElementById('end-date-select').value;
   if (sDate > eDate) { alert('表示期間が不正です。'); return; }
   currentSearchDateRange = { startDate: sDate, endDate: eDate };
 
+  // MPコード直接検索の場合は、全シートをマージする必要があるためハイブリッド通信処理を行います
   if (document.getElementById('use-budget-code-search').checked) {
-    const bdCode = document.getElementById('budget-code-search').value.trim(); if (!bdCode) { alert("MPコードを入力してください。"); return; }
-    setLoading(true, '全シートからMPコードを横断検索中...'); document.querySelector('.results').style.display = 'none'; document.getElementById('mp-data-error-area').innerText = ''; 
+    const bdCode = document.getElementById('budget-code-search').value.trim(); 
+    if (!bdCode) { alert("MPコードを入力してください。"); return; }
+    setLoading(true, '全シートからMPコードを横断検索中...'); 
+    document.querySelector('.results').style.display = 'none'; 
+    document.getElementById('mp-data-error-area').innerText = ''; 
+    
     google.script.run
       .withSuccessHandler(jsonResponse => {
         try {
           const response = JSON.parse(jsonResponse);
           if (response.searchResults.length === 0) { setLoading(false); showStatus('該当するMPコードが見つかりませんでした。', false); return; }
-          displayResults(response, response.searchResults.length); loadMpDataBackground(response.searchResults); setLoading(false); 
+          
+          // 画面用に結合
+          response.searchResults.forEach(resItem => {
+             resItem.mpData = "__NOT_FOUND__";
+          });
+          
+          g_masterData = {
+            records: response.searchResults,
+            mpSheetName: 'MP',
+            remarksInfo: response.remarksInfo,
+            basicInfo: response.basicInfo
+          };
+          allFilteredItems = response.searchResults;
+          currentPage = 1;
+          displayLocalResults(response.monthlyHeaders);
+          loadMpDataBackground(response.searchResults, response.monthlyHeaders); // ハイブリッド時のバックグラウンド取得
+          setLoading(false); 
         } catch(e) { setLoading(false); showStatus("エラー: " + e.message, true); }
       })
       .withFailureHandler(err => { setLoading(false); showStatus("通信エラー: " + err.message, true); })
@@ -231,79 +288,147 @@ function searchData() {
     return;
   }
 
-  const selectedGroups = getSelectedCheckboxes('dept-filter-container'); const selectedSubjects = getSelectedCheckboxes('subject-filter-container'); const otherCol = document.getElementById('other-column').value; const otherKey = document.getElementById('other-keyword').value.toLowerCase();
-  setLoading(true, '検索中...'); document.querySelector('.results').style.display = 'none'; document.getElementById('mp-data-error-area').innerText = ''; 
-  allFilteredItems = g_masterData.searchIndex.filter(item => {
+  // 💡 通常のフィルタリング：通信0回で瞬時に配列操作
+  const selectedGroups = getSelectedCheckboxes('dept-filter-container'); 
+  const selectedSubjects = getSelectedCheckboxes('subject-filter-container'); 
+  const otherCol = document.getElementById('other-column').value; 
+  const otherKey = document.getElementById('other-keyword').value.toLowerCase();
+  
+  setLoading(true, 'フィルタリング処理中...'); 
+  document.querySelector('.results').style.display = 'none'; 
+  document.getElementById('mp-data-error-area').innerText = ''; 
+  
+  allFilteredItems = g_masterData.records.filter(item => {
     if (selectedGroups.length > 0 && !selectedGroups.includes(item.g)) return false;
     if (selectedSubjects.length > 0 && !selectedSubjects.includes(item.s)) return false;
-    if (otherCol && otherKey) { if (!item.o[otherCol] || !item.o[otherCol].toLowerCase().includes(otherKey)) return false; }
+    if (otherCol && otherKey) { 
+      if (!item[otherCol] || !item[otherCol].toLowerCase().includes(otherKey)) return false; 
+    }
     return true;
   });
+  
   if (allFilteredItems.length === 0) { setLoading(false); showStatus('条件に一致するデータがありませんでした。', false); return; }
-  currentPage = 1; fetchPageData();
+  currentPage = 1; 
+  
+  // 表示用月別日付ヘッダーの抽出
+  const monthlyHeaders = g_masterData.dateOptions.map(ymStr => {
+    const [y, m] = ymStr.split('-').map(Number);
+    return new Date(y, m - 1, 1).getTime();
+  }).filter(timeMs => {
+    const d = new Date(timeMs);
+    const ym = `${d.getFullYear()}-${('0'+(d.getMonth()+1)).slice(-2)}`;
+    return ym >= sDate && ym <= eDate;
+  });
+
+  displayLocalResults(monthlyHeaders);
+  setLoading(false);
 }
 
+/**
+ * 💡 ページめくり：GASとの通信は一切せず、メモリから10件切り抜いて一瞬で再描画します。
+ */
 function fetchPageData() {
-  const startIndex = (currentPage - 1) * PAGE_SIZE; const pageItems = allFilteredItems.slice(startIndex, startIndex + PAGE_SIZE).map(i => i.id);
-  setLoading(true, `詳細データを取得中... (${currentPage}ページ目)`);
-  google.script.run
-    .withSuccessHandler(jsonResponse => { try { const response = JSON.parse(jsonResponse); displayResults(response, allFilteredItems.length); loadMpDataBackground(response.searchResults); setLoading(false); } catch(e) { setLoading(false); showStatus("エラー: " + e.message, true); } })
-    .withFailureHandler(err => { setLoading(false); showStatus("通信エラー", true); })
-    .fetchPageDataForWebApp(pageItems, currentSearchDateRange);
+  const sDate = document.getElementById('start-date-select').value;
+  const monthlyHeaders = g_masterData.dateOptions.map(ymStr => {
+    const [y, m] = ymStr.split('-').map(Number);
+    return new Date(y, m - 1, 1).getTime();
+  }).filter(timeMs => {
+    const d = new Date(timeMs);
+    const ym = `${d.getFullYear()}-${('0'+(d.getMonth()+1)).slice(-2)}`;
+    return ym >= sDate && ym <= document.getElementById('end-date-select').value;
+  });
+  
+  displayLocalResults(monthlyHeaders);
 }
 
-function populateCheckboxes(id, list) {
-  const container = document.getElementById(id); container.innerHTML = '';
-  const allLabel = document.createElement('label'); allLabel.className='select-all-label'; const allCb = document.createElement('input'); allCb.type='checkbox'; allCb.checked=true;
-  allLabel.appendChild(allCb); allLabel.appendChild(document.createTextNode(' すべて選択/解除')); container.appendChild(allLabel);
-  const div = document.createElement('div'); div.className='checkbox-container';
-  list.forEach(val => { const l = document.createElement('label'); l.className='checkbox-item'; const cb = document.createElement('input'); cb.type='checkbox'; cb.value=val; cb.checked=true; l.appendChild(cb); l.appendChild(document.createTextNode(' '+val)); div.appendChild(l); });
-  container.appendChild(div);
-  allCb.addEventListener('change', e => { div.querySelectorAll('input').forEach(c => c.checked = e.target.checked); if(id=='dept-filter-container') updateSuggestions(); });
-  div.addEventListener('change', () => { if(id=='dept-filter-container') updateSuggestions(); });
-}
+function displayLocalResults(monthlyHeaders) {
+  const total = allFilteredItems.length;
+  const startIndex = (currentPage - 1) * PAGE_SIZE; 
+  const pageItems = allFilteredItems.slice(startIndex, startIndex + PAGE_SIZE);
 
-function populateSelect(id, list) { const s = document.getElementById(id); s.innerHTML = '<option value="">-- 選択 --</option>'; list.forEach(v => { const o=document.createElement('option'); o.value=v; o.text=v; s.appendChild(o); }); }
-function getSelectedCheckboxes(id) { return Array.from(document.querySelectorAll(`#${id} .checkbox-container input:checked`)).map(c=>c.value); }
-function setLoading(b, msg='') { if (b) { document.getElementById('loading-message').innerText = msg; document.getElementById('loading-overlay').style.display = 'flex'; } else { document.getElementById('loading-overlay').style.display = 'none'; } }
-function showStatus(msg, isErr) { const s = document.getElementById('status'); s.className = isErr ? 'status-error' : 'status-success'; s.innerHTML = msg; }
-
-function displayResults(response, total) {
-  const { searchResults, monthlyHeaders, basicInfo, remarksInfo } = response; const resultArea = document.getElementById('result-area'); resultArea.innerHTML = ''; document.querySelector('.results').style.display = 'block';
-  window.currentMonthlyHeaders = monthlyHeaders; window.currentRemarksInfo = remarksInfo;
+  const resultArea = document.getElementById('result-area'); 
+  resultArea.innerHTML = ''; 
+  document.querySelector('.results').style.display = 'block';
+  
+  window.currentMonthlyHeaders = monthlyHeaders; 
+  window.currentRemarksInfo = g_masterData.remarksInfo;
 
   let html = '';
-  searchResults.forEach(data => {
-    const bdCode = data['MPコード'] || ''; const parts = data.rowNumber.split("___"); const sheetLabel = parts[0] || 'Unknown';
+  pageItems.forEach(data => {
+    const bdCode = data['MPコード'] || ''; 
+    const parts = data.rowNumber.split("___");
     html += `<div class="result-card" id="result-${data.rowNumber}">`;
     html += `<div class="result-header"><span>${bdCode}</span>`;
     html += `<button class="btn-success" onclick="updateSingleItem('${data.rowNumber}')">この行を更新</button></div>`;
     html += `<div class="result-body">`;
     html += `<div class="result-section"><div class="info-grid">`;
-    basicInfo.readOnly.forEach(h => { if(h!=='MPコード') html += `<div class="info-item"><label>${h}</label><div class="value">${data[h]||'--'}</div></div>`; });
+    
+    g_masterData.basicInfo.readOnly.forEach(h => { 
+      if(h !== 'MPコード') html += `<div class="info-item"><label>${h}</label><div class="value">${data[h]||'--'}</div></div>`; 
+    });
+    
     html += `</div></div>`;
     html += `<div class="result-section"><h5>備考</h5><div class="info-grid">`;
-    remarksInfo.editable.forEach(h => { html += `<div class="remark-item"><label>${h}</label><textarea id="input-${h}-${data.rowNumber}" data-original="${data[h]||''}">${data[h]||''}</textarea></div>`; });
+    
+    g_masterData.remarksInfo.editable.forEach(h => { 
+      html += `<div class="remark-item"><label>${h}</label><textarea id="input-${h}-${data.rowNumber}" data-original="${data[h]||''}">${data[h]||''}</textarea></div>`; 
+    });
+    
     html += `</div></div>`;
     html += `<div class="result-section"><h5>月額データ</h5><div class="monthly-container"><div class="monthly-items-wrapper">`;
+    
     monthlyHeaders.forEach(ts => {
-        const d = new Date(Number(ts)); const ym = `${d.getFullYear()}/${('0'+(d.getMonth()+1)).slice(-2)}`; const val = (data[ts]!==undefined && data[ts]!==null) ? Number(data[ts]).toLocaleString() : '0';
-        html += `<div class="monthly-item"><label>${ym}</label><div class="mp-value-display" id="mp-${data.rowNumber}-${ts}"><span class="loader-sm"></span> 読込中...</div><div class="value-display">現在額: ${val} 円</div><input type="number" id="input-${ts}-${data.rowNumber}" placeholder="更新額"></div>`;
+        const d = new Date(Number(ts)); 
+        const ym = `${d.getFullYear()}/${('0'+(d.getMonth()+1)).slice(-2)}`; 
+        const valRaw = (data[ts] !== undefined && data[ts] !== null) ? Number(data[ts]) : 0;
+        
+        // 💡 新設計：すでに事前結合されているMP金額を出力（遅延時間・タイムラグ無し）
+        let mpValDisplay = '該当なし';
+        if (data.mpData && data.mpData !== "__NOT_FOUND__") {
+          const val = data.mpData[ts];
+          mpValDisplay = (val === null || val === undefined) ? '0' : Number(val).toLocaleString();
+        }
+        const mpLabel = g_masterData.mpSheetName || 'MP';
+
+        html += `<div class="monthly-item">` +
+                  `<label>${ym}</label>` +
+                  `<div class="mp-value-display" id="mp-${data.rowNumber}-${ts}">${mpLabel}: ${mpValDisplay}</div>` +
+                  `<div class="value-display">現在額: ${valRaw.toLocaleString()} 円</div>` +
+                  `<input type="number" id="input-${ts}-${data.rowNumber}" placeholder="更新額" data-original="${valRaw}">` +
+                `</div>`;
     });
+    
     html += `</div></div></div></div></div>`;
   });
-  resultArea.innerHTML = html; renderPagination(total); showStatus(`${total}件中 ${((currentPage - 1) * PAGE_SIZE) + 1}〜${Math.min(((currentPage - 1) * PAGE_SIZE) + PAGE_SIZE, total)}件を表示`, false);
+  
+  resultArea.innerHTML = html; 
+  renderPagination(total); 
+  showStatus(`${total}件中 ${startIndex + 1}〜${Math.min(startIndex + PAGE_SIZE, total)}件を表示`, false);
 }
 
-function loadMpDataBackground(results) {
-  if(!results.length) return; const ids = results.map(r=>r.rowNumber); const bds = results.map(r=>r['MPコード']); const mpDataErrorArea = document.getElementById('mp-data-error-area'); mpDataErrorArea.innerText = '';
+function loadMpDataBackground(results, monthlyHeaders) {
+  if(!results.length) return; 
+  const ids = results.map(r=>r.rowNumber); 
+  const bds = results.map(r=>r['MPコード']); 
+  const mpDataErrorArea = document.getElementById('mp-data-error-area'); 
+  mpDataErrorArea.innerText = '';
+  
   google.script.run.withSuccessHandler(res => {
       if(res.error) { mpDataErrorArea.innerText = "外部データ取得エラー: " + res.error; return; }
-      const map = res.mpDataMap; const label = res.mpSheetName;
+      const map = res.mpDataMap; 
+      const label = res.mpSheetName;
+      g_masterData.mpSheetName = label;
+      
       ids.forEach((rNum) => {
           const dataForThisRow = map[rNum];
-          window.currentMonthlyHeaders.forEach(ts => {
-              const el = document.getElementById(`mp-${rNum}-${ts}`); if(!el) return; let displayVal = '';
+          const matchedItem = allFilteredItems.find(item => item.rowNumber === rNum);
+          if (matchedItem) {
+            matchedItem.mpData = dataForThisRow;
+          }
+          monthlyHeaders.forEach(ts => {
+              const el = document.getElementById(`mp-${rNum}-${ts}`); 
+              if(!el) return; 
+              let displayVal = '';
               if (dataForThisRow === undefined || dataForThisRow === "__NOT_FOUND__") { displayVal = '該当なし'; } 
               else { const val = dataForThisRow[ts]; displayVal = (val === null || val === undefined) ? '0' : Number(val).toLocaleString(); }
               el.innerText = `${label}: ${displayVal}`;
@@ -312,51 +437,180 @@ function loadMpDataBackground(results) {
   }).withFailureHandler(err => { mpDataErrorArea.innerText = "通信エラー: " + err.message; }).getMpDataOnly(ids, bds);
 }
 
+function populateCheckboxes(id, list) {
+  const container = document.getElementById(id); 
+  container.innerHTML = '';
+  const allLabel = document.createElement('label'); 
+  allLabel.className='select-all-label'; 
+  const allCb = document.createElement('input'); 
+  allCb.type='checkbox'; 
+  allCb.checked=true;
+  
+  allLabel.appendChild(allCb); 
+  allLabel.appendChild(document.createTextNode(' すべて選択/解除')); 
+  container.appendChild(allLabel);
+  
+  const div = document.createElement('div'); 
+  div.className='checkbox-container';
+  list.forEach(val => { 
+    const l = document.createElement('label'); 
+    l.className='checkbox-item'; 
+    const cb = document.createElement('input'); 
+    cb.type='checkbox'; 
+    cb.value=val; 
+    cb.checked=true; 
+    l.appendChild(cb); 
+    l.appendChild(document.createTextNode(' ' + val)); 
+    div.appendChild(l); 
+  });
+  
+  container.appendChild(div);
+  allCb.addEventListener('change', e => { div.querySelectorAll('input').forEach(c => c.checked = e.target.checked); if(id=='dept-filter-container') updateSuggestions(); });
+  div.addEventListener('change', () => { if(id=='dept-filter-container') updateSuggestions(); });
+}
+
+function populateSelect(id, list) { 
+  const s = document.getElementById(id); 
+  s.innerHTML = '<option value="">-- 選択 --</option>'; 
+  list.forEach(v => { const o = document.createElement('option'); o.value=v; o.text=v; s.appendChild(o); }); 
+}
+
+function getSelectedCheckboxes(id) { 
+  return Array.from(document.querySelectorAll(`#${id} .checkbox-container input:checked`)).map(c=>c.value); 
+}
+
+function setLoading(b, msg='') { 
+  if (b) { 
+    document.getElementById('loading-message').innerText = msg; 
+    document.getElementById('loading-overlay').style.display = 'flex'; 
+  } else { 
+    document.getElementById('loading-overlay').style.display = 'none'; 
+  } 
+}
+
+function showStatus(msg, isErr) { 
+  const s = document.getElementById('status'); 
+  s.className = isErr ? 'status-error' : 'status-success'; 
+  s.innerHTML = msg; 
+}
+
 function renderPagination(total) {
   const totalPages = Math.ceil(total / PAGE_SIZE);
   let html = `<button onclick="goToPage(${currentPage-1})" ${currentPage===1?'disabled':''}>&lt;</button> `;
   html += `<input type="number" class="page-input" value="${currentPage}" onchange="jumpToPage(this.value, ${totalPages})" min="1" max="${totalPages}"><span> / ${totalPages}</span> <button onclick="goToPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>&gt;</button>`;
-  document.getElementById('pagination-top').innerHTML = html; document.getElementById('pagination-bottom').innerHTML = html;
+  document.getElementById('pagination-top').innerHTML = html; 
+  document.getElementById('pagination-bottom').innerHTML = html;
 }
+
 function goToPage(p) { currentPage = p; fetchPageData(); }
 function jumpToPage(val, max) { let p = parseInt(val, 10); if (isNaN(p) || p < 1) p = 1; if (p > max) p = max; currentPage = p; fetchPageData(); }
 
-// 💡 復元：リッチなオリジナルポップアップ
 function showCustomModal(msg) {
   document.getElementById('modal-message').innerText = msg;
   document.getElementById('custom-modal').style.display = 'flex';
 }
+
 function closeCustomModal() {
   document.getElementById('custom-modal').style.display = 'none';
   if (document.getElementById('use-budget-code-search').checked) {
-    const bdCode = document.getElementById('budget-code-search').value.trim();
-    setLoading(true, '最新の更新結果を再読込中...');
-    google.script.run.withSuccessHandler(jsonResponse => {
-        const response = JSON.parse(jsonResponse); displayResults(response, response.searchResults.length); loadMpDataBackground(response.searchResults); setLoading(false);
-    }).searchDataByMpCode(bdCode, currentSearchDateRange);
+    searchData();
   } else {
-    fetchPageData();
+    // 💡 更新後は、シートの全最新データ(他人の更新分含む)を再取得してから再表示
+    loadSheetData();
   }
 }
 
+/**
+ * 💡 楽観的ロック更新（単一）
+ * 入力された変更後の値(updates)だけでなく、ロード時点のセルの値(originals)もあわせてGASに送り、
+ * 誰かに上書きされていないかを検証します。
+ */
 function updateSingleItem(rowNum) {
-  const updates = { rowNumber: rowNum }; let hasDiff = false;
-  window.currentRemarksInfo.editable.forEach(h => { const el = document.getElementById(`input-${h}-${rowNum}`); if(el && el.value !== el.dataset.original) { updates[h] = el.value; hasDiff = true; } });
-  window.currentMonthlyHeaders.forEach(ts => { const el = document.getElementById(`input-${ts}-${rowNum}`); if(el && el.value !== '') { updates[ts] = el.value; hasDiff = true; } });
-  if(!hasDiff) { alert('変更がありません'); return; } if(!confirm('更新しますか？')) return;
-  setLoading(true, '更新中...'); google.script.run.withSuccessHandler((msg) => { setLoading(false); showCustomModal(msg); }).updateMultipleData([updates]);
+  const updates = {}; 
+  const originals = {};
+  let hasDiff = false;
+  
+  window.currentRemarksInfo.editable.forEach(h => { 
+    const el = document.getElementById(`input-${h}-${rowNum}`); 
+    if (el && el.value !== el.dataset.original) { 
+      updates[h] = el.value; 
+      originals[h] = el.dataset.original;
+      hasDiff = true; 
+    } 
+  });
+  
+  window.currentMonthlyHeaders.forEach(ts => { 
+    const el = document.getElementById(`input-${ts}-${rowNum}`); 
+    if (el && el.value !== '') { 
+      updates[ts] = el.value; 
+      originals[ts] = el.dataset.original || "0";
+      hasDiff = true; 
+    } 
+  });
+  
+  if(!hasDiff) { alert('変更がありません'); return; } 
+  if(!confirm('競合チェックを行って更新を実行しますか？')) return;
+  
+  setLoading(true, 'セルの競合チェックおよび書き込みを実行中...'); 
+  google.script.run
+    .withSuccessHandler((msg) => { 
+      setLoading(false); 
+      showCustomModal(msg); 
+    })
+    .withFailureHandler((err) => {
+      setLoading(false);
+      alert(err.message); // 競合エラーメッセージ等をトーストで警告
+    })
+    .updateMultipleDataWithConflictCheck([{ rowNumber: rowNum, updates: updates, originals: originals }]);
 }
 
+/**
+ * 💡 楽観的ロック更新（一括）
+ */
 function updateAllData() {
   const allUpdates = [];
   document.querySelectorAll('.result-card').forEach(card => {
-      const rowNum = card.id.replace('result-', ''); const updates = { rowNumber: rowNum }; let hasDiff = false;
-      window.currentRemarksInfo.editable.forEach(h => { const el = document.getElementById(`input-${h}-${rowNum}`); if(el && el.value !== el.dataset.original) { updates[h] = el.value; hasDiff = true; } });
-      window.currentMonthlyHeaders.forEach(ts => { const el = document.getElementById(`input-${ts}-${rowNum}`); if(el && el.value !== '') { updates[ts] = el.value; hasDiff = true; } });
-      if(hasDiff) allUpdates.push(updates);
+      const rowNum = card.id.replace('result-', ''); 
+      const updates = {}; 
+      const originals = {};
+      let hasDiff = false;
+      
+      window.currentRemarksInfo.editable.forEach(h => { 
+        const el = document.getElementById(`input-${h}-${rowNum}`); 
+        if (el && el.value !== el.dataset.original) { 
+          updates[h] = el.value; 
+          originals[h] = el.dataset.original;
+          hasDiff = true; 
+        } 
+      });
+      
+      window.currentMonthlyHeaders.forEach(ts => { 
+        const el = document.getElementById(`input-${ts}-${rowNum}`); 
+        if (el && el.value !== '') { 
+          updates[ts] = el.value; 
+          originals[ts] = el.dataset.original || "0";
+          hasDiff = true; 
+        } 
+      });
+      if(hasDiff) {
+        allUpdates.push({ rowNumber: rowNum, updates: updates, originals: originals });
+      }
   });
-  if(allUpdates.length===0) { alert('変更がありません'); return; } if(!confirm(`${allUpdates.length}件 更新しますか？`)) return;
-  setLoading(true, '一括更新中...'); google.script.run.withSuccessHandler((msg) => { setLoading(false); showCustomModal(msg); }).updateMultipleData(allUpdates);
+  
+  if(allUpdates.length === 0) { alert('変更がありません'); return; } 
+  if(!confirm(`${allUpdates.length}件を、競合チェックを行って一括更新しますか？`)) return;
+  
+  setLoading(true, '全データの更新競合チェック・一括反映中...'); 
+  google.script.run
+    .withSuccessHandler((msg) => { 
+      setLoading(false); 
+      showCustomModal(msg); 
+    })
+    .withFailureHandler((err) => {
+      setLoading(false);
+      alert(err.message);
+    })
+    .updateMultipleDataWithConflictCheck(allUpdates);
 }
 </script>
 </body>
