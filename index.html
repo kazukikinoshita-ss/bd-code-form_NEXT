@@ -7,10 +7,8 @@ body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 2rem; backgroun
 .header-nav { margin-bottom: 1rem; max-width: 700px; margin-left: auto; margin-right: auto; }
 .back-button { display: inline-block; text-decoration: none; font-size: 0.9rem; color: #fff; background-color: #6c757d; padding: 0.5rem 1rem; border-radius: 5px; transition: background-color 0.2s; }
 .back-button:hover { background-color: #5a6268; }
-/* ★修正: .container 自体に背景白・シャドウ・パディングを設定し、更新フォームと構造を完全に統一 */
 .container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 700px; margin-left: auto; margin-right: auto;}
 h1 { color: #444; }
-/* ★追加: 更新フォームに合わせた説明文のスタイル */
 p.description { color: #666; font-size: 0.9rem; margin-top: -1rem; margin-bottom: 1.5rem; }
 .form-group { margin-bottom: 1rem; }
 label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
@@ -19,84 +17,29 @@ input { width: 100%; padding: 0.5rem; box-sizing: border-box; border: 1px solid 
 .period-group { display: flex; gap: 10px; align-items: center; }
 .period-group input { flex: 1; }
 
-/* 月別金額入力用のスタイル */
-.monthly-container { 
-  background-color: #f0f7ff; 
-  padding: 1.5rem; 
-  border-radius: 8px; 
-  border: 1px solid #cce5ff; 
-  margin-top: 10px; 
-}
-.monthly-title {
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 1.5rem;
-  font-size: 1rem;
-}
-.quarter-group {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px dashed #b3d7ff;
-}
-.quarter-group:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-  margin-bottom: 0;
-}
-.quarter-label {
-  font-weight: bold;
-  color: #0056b3;
-  margin-bottom: 0.8rem;
-  font-size: 0.95rem;
-  background-color: #e6f2ff;
-  padding: 4px 10px;
-  border-radius: 4px;
-  display: inline-block;
-}
-.quarter-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 15px;
-}
-.monthly-item {
-  display: flex;
-  flex-direction: column;
-}
-.monthly-item.empty {
-  visibility: hidden;
-}
-.monthly-item label { 
-  font-size: 0.9rem; 
-  color: #0056b3; 
-  font-weight: bold; 
-  margin-bottom: 4px; 
-}
-.monthly-item input { 
-  font-family: 'Helvetica Neue', Arial, sans-serif; 
-  text-align: right; 
-  border: 1px solid #b3d7ff;
-  border-radius: 4px;
-  padding: 0.5rem;
-  font-size: 1rem;
-}
-.monthly-item input:focus {
-  outline: none;
-  border-color: #0056b3;
-  box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
-}
-.monthly-total { 
-  text-align: right; 
-  font-weight: bold; 
-  font-size: 1.2rem; 
-  color: #0056b3; 
-  margin-top: 1.5rem; 
-  border-top: 2px solid #b3d7ff; 
-  padding-top: 1rem; 
-}
+.monthly-container { background-color: #f0f7ff; padding: 1.5rem; border-radius: 8px; border: 1px solid #cce5ff; margin-top: 10px; }
+.monthly-title { font-weight: bold; color: #333; margin-bottom: 1rem; font-size: 1rem; }
+.bulk-input-area { background-color: #e6f2ff; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px dashed #007bff; display: flex; flex-direction: column; gap: 10px; }
+.bulk-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.bulk-controls input { width: 160px; text-align: right; font-size: 1rem; }
+.btn-bulk { padding: 0.5rem 1rem; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; color: #fff; width: auto; margin: 0; font-size: 0.9rem; }
+.btn-bulk-reflect { background-color: #007bff; }
+.btn-bulk-reflect:hover { background-color: #0056b3; }
+.btn-bulk-divide { background-color: #28a745; }
+.btn-bulk-divide:hover { background-color: #218838; }
 
-button { background-color: #007bff; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; transition: background-color 0.2s; width: 100%; margin-top: 1rem;}
-button:disabled { background-color: #a0a0a0; cursor: not-allowed; }
-button:not(:disabled):hover { background-color: #0056b3; }
+.quarter-group { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px dashed #b3d7ff; }
+.quarter-group:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+.quarter-label { font-weight: bold; color: #0056b3; margin-bottom: 0.8rem; font-size: 0.95rem; background-color: #e6f2ff; padding: 4px 10px; border-radius: 4px; display: inline-block; }
+.quarter-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+.monthly-item { display: flex; flex-direction: column; }
+.monthly-item.empty { visibility: hidden; }
+.monthly-item label { font-size: 0.9rem; color: #0056b3; font-weight: bold; margin-bottom: 4px; }
+.monthly-item input { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: right; border: 1px solid #b3d7ff; border-radius: 4px; padding: 0.5rem; font-size: 1rem; }
+.monthly-total { text-align: right; font-weight: bold; font-size: 1.2rem; color: #0056b3; margin-top: 1.5rem; border-top: 2px solid #b3d7ff; padding-top: 1rem; }
+
+button.submit-btn { background-color: #007bff; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; transition: background-color 0.2s; width: 100%; margin-top: 1rem;}
+button.submit-btn:disabled { background-color: #a0a0a0; cursor: not-allowed; }
 #message { margin-top: 1.5rem; padding: 1rem; border-radius: 5px; text-align: center; }
 .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
 .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
@@ -110,15 +53,11 @@ hr { border: none; border-top: 1px solid #eee; margin: 2rem 0; }
 .modal-text { margin-bottom: 1.5rem; white-space: pre-wrap; line-height: 1.5; }
 .modal-button { color: white; padding: 0.5rem 2rem; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; margin: 0 0.5rem; transition: background-color 0.2s; }
 .btn-ok { background-color: #007bff; } .btn-ok:hover { background-color: #0056b3; }
-.btn-yes { background-color: #007bff; } .btn-yes:hover { background-color: #0056b3; }
-.btn-no { background-color: #6c757d; } .btn-no:hover { background-color: #5a6268; }
 .input-error { background-color: #ffe6e6 !important; border: 1px solid #dc3545 !important; color: #721c24; }
 </style>
 </head>
 <body>
-<div class="header-nav">
-<a href="<?= topUrl ?>" class="back-button" target="_top">← TOPに戻る</a>
-</div>
+<div class="header-nav"><a href="<?= topUrl ?>" class="back-button" target="_top">← TOPに戻る</a></div>
 
 <div class="container">
   <h1>MPコード新規登録フォーム</h1>
@@ -139,6 +78,14 @@ hr { border: none; border-top: 1px solid #eee; margin: 2rem 0; }
   <input type="text" id="bu" name="bu" required list="bu-list">
   <datalist id="bu-list"></datalist>
   </div>
+
+  <div class="form-group" id="target-sheet-group" style="display:none;">
+    <label for="target-sheet">保存先シート:</label>
+    <select id="target-sheet" name="target-sheet" style="width:100%; padding:0.5rem; border:1px solid #ccc; border-radius:4px;">
+      <option value="">-- シートを選択してください --</option>
+    </select>
+  </div>
+
   <div class="form-group">
   <label for="department">計上部門:</label>
   <input type="text" id="department" name="department" required list="department-list" placeholder="先に対象BUを選択してください" autocomplete="off">
@@ -166,11 +113,19 @@ hr { border: none; border-top: 1px solid #eee; margin: 2rem 0; }
 
   <div class="form-group" id="monthly-amounts-area" style="display:none;">
     <div class="monthly-container">
-      <div class="monthly-title">各月の金額を入力してください：</div>
-      <div id="monthly-grid"></div>
-      <div class="monthly-total">
-        合計: <span id="monthly-total-display">0</span> 円
+      
+      <div class="bulk-input-area">
+        <label style="color:#0056b3; font-size: 0.9rem; margin-bottom: 0;">一括入力コントロール（選択期間全体に反映されます）</label>
+        <div class="bulk-controls">
+          <input type="text" id="bulk-amount" placeholder="金額を入力" oninput="formatBulkInput(this)">
+          <button type="button" class="btn-bulk btn-bulk-reflect" onclick="applyBulkAmount('monthly')">単月額として毎月に反映</button>
+          <button type="button" class="btn-bulk btn-bulk-divide" onclick="applyBulkAmount('divide')">総額として期間で均等按分</button>
+        </div>
       </div>
+
+      <div class="monthly-title">各月の金額を入力・調整してください：</div>
+      <div id="monthly-grid"></div>
+      <div class="monthly-total">合計: <span id="monthly-total-display">0</span> 円</div>
     </div>
   </div>
 
@@ -195,7 +150,7 @@ hr { border: none; border-top: 1px solid #eee; margin: 2rem 0; }
   <input type="text" id="notes" name="notes">
   </div>
 
-  <button type="submit" id="submitButton" >登録する</button>
+  <button type="submit" id="submitButton" class="submit-btn">登録する</button>
   </form>
   <div id="message" style="display:none;"></div>
   <a href="#" id="register-another" style="display:none; margin-top: 1rem; text-align: center; display: block;" >別のコードを登録する</a>
@@ -205,13 +160,7 @@ hr { border: none; border-top: 1px solid #eee; margin: 2rem 0; }
   <div class="modal-box">
     <div class="modal-title" id="modal-title">入力エラー</div>
     <div class="modal-text" id="modal-message"></div>
-    <div id="modal-buttons-ok" style="display: block;">
-      <button class="modal-button btn-ok" id="modal-ok-btn">OK</button>
-    </div>
-    <div id="modal-buttons-yesno" style="display: none; justify-content: center;">
-      <button class="modal-button btn-yes" id="modal-yes-btn">YES</button>
-      <button class="modal-button btn-no" id="modal-no-btn">NO</button>
-    </div>
+    <div id="modal-buttons-ok" style="display: block;"><button class="modal-button btn-ok" id="modal-ok-btn">OK</button></div>
   </div>
 </div>
 
@@ -223,24 +172,13 @@ const registerAnotherLink = document.getElementById('register-another');
 const modalOverlay = document.getElementById('custom-modal');
 const modalMessage = document.getElementById('modal-message');
 const modalOkBtn = document.getElementById('modal-ok-btn');
-let modalCallback = null;
-
-const fieldValidations = [
-  { id: 'slideParentId', list: 'parent-id-list', label: '親ID' },
-  { id: 'bu', list: 'bu-list', label: '対象BU' },
-  { id: 'department', list: 'department-list', label: '計上部門' },
-  { id: 'account', list: 'account-list', label: '勘定科目' },
-  { id: 'pjc', list: 'pjc-list', label: '対象PJC' },
-  { id: 'vendor', list: 'vendor-list', label: '仕入先' }
-];
+let modalCallback = null; let globalRouteMap = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   google.script.run
   .withSuccessHandler(response => {
-    if (response.error) {
-      alert("データの読み込みに失敗しました: " + response.error);
-      return;
-    }
+    if (response.error) { alert("データの読み込みに失敗しました: " + response.error); return; }
+    globalRouteMap = response.routeMap || [];
     populateDatalist('parent-id-list')(response.parentIds);
     populateDatalist('bu-list')(response.bus);
     populateDatalist('pjc-list')(response.pjcs);
@@ -250,303 +188,122 @@ document.addEventListener('DOMContentLoaded', () => {
   .getInitialFormData();
 
   document.getElementById('bu').addEventListener('change', updateDepartmentSuggestions);
-  fieldValidations.forEach(v => setupStrictDatalist(v.id, v.list, v.label));
-
-  document.getElementById('account').addEventListener('change', function() {
-    const val = this.value.trim();
-    const targetAccounts = ['ｼｽﾃﾑ利用料_その他', 'ｻｰﾊﾞｰ_ｸﾗｳﾄﾞ利用料'];
-    
-    if (targetAccounts.includes(val)) {
-      const msg = '各クラウドサービス（AWS / GCP / Snowflake / Databricks / Azure）の費用は別途管理されており、MPコードの発番方法が異なります。\nこれらのクラウドサービスに含まれますか？';
-      showConfirmModal('確認', msg, 
-        () => {
-          const supportMsg = '詳細は <a href="https://supership.slack.com/archives/C092J9B5TRV" target="_blank">#support-fpa</a> にお問い合わせください。';
-          document.getElementById('modal-title').textContent = 'ご案内';
-          document.getElementById('modal-title').style.color = '#007bff';
-          document.getElementById('modal-message').innerHTML = supportMsg;
-          document.getElementById('modal-buttons-ok').style.display = 'block';
-          document.getElementById('modal-buttons-yesno').style.display = 'none';
-          modalCallback = null; 
-          submitButton.disabled = true;
-        },
-        () => {
-          submitButton.disabled = false;
-        }
-      );
-    } else {
-       submitButton.disabled = false;
-    }
-  });
-
-  modalOkBtn.addEventListener('click', () => {
-    modalOverlay.style.display = 'none';
-    if (modalCallback) { modalCallback(); modalCallback = null; }
-  });
+  document.getElementById('bu').addEventListener('input', handleBuChange);
+  modalOkBtn.addEventListener('click', () => { modalOverlay.style.display = 'none'; if (modalCallback) { modalCallback(); modalCallback = null; } });
 });
 
-function parseNumber(value) {
-  if (!value) return 0;
-  const num = Number(value.toString().replace(/,/g, ''));
-  return isNaN(num) ? 0 : num;
-}
+function parseNumber(value) { if (!value) return 0; const num = Number(value.toString().replace(/,/g, '')); return isNaN(num) ? 0 : num; }
+function formatAndCalculate(el) { let val = el.value.replace(/,/g, '').replace(/[^\d.-]/g, ''); el.value = (val !== '' && val !== '-') ? Number(val).toLocaleString() : val; calculateTotal(); }
+function formatBulkInput(el) { let val = el.value.replace(/,/g, '').replace(/[^\d.-]/g, ''); el.value = (val !== '' && val !== '-') ? Number(val).toLocaleString() : val; }
 
-function formatAndCalculate(inputElement) {
-  let val = inputElement.value.replace(/,/g, '').replace(/[^\d.-]/g, '');
-  if (val !== '' && val !== '-') {
-    inputElement.value = Number(val).toLocaleString();
-  } else {
-    inputElement.value = val;
+function applyBulkAmount(mode) {
+  const bulkInputStr = document.getElementById('bulk-amount').value;
+  const amount = parseNumber(bulkInputStr);
+  if (isNaN(amount) || bulkInputStr === '') return;
+  const inputs = document.querySelectorAll('.monthly-input');
+  if (inputs.length === 0) return;
+
+  if (mode === 'monthly') {
+    inputs.forEach(input => { input.value = amount.toLocaleString(); });
+  } else if (mode === 'divide') {
+    const count = inputs.length; const baseAmount = Math.floor(amount / count); const remainder = amount % count;
+    inputs.forEach((input, index) => { const val = (index === 0) ? (baseAmount + remainder) : baseAmount; input.value = val.toLocaleString(); });
   }
   calculateTotal();
 }
 
 function generateMonthlyInputs() {
-  const startDateStr = document.getElementById('startDate').value;
-  const endDateStr = document.getElementById('endDate').value;
-  const area = document.getElementById('monthly-amounts-area');
-  const grid = document.getElementById('monthly-grid');
+  const startDateStr = document.getElementById('startDate').value; const endDateStr = document.getElementById('endDate').value;
+  const area = document.getElementById('monthly-amounts-area'); const grid = document.getElementById('monthly-grid');
+  if (!startDateStr || !endDateStr || startDateStr > endDateStr) { area.style.display = 'none'; grid.innerHTML = ''; calculateTotal(); return; }
   
-  if (!startDateStr || !endDateStr || startDateStr > endDateStr) {
-    area.style.display = 'none';
-    grid.innerHTML = '';
-    calculateTotal();
-    return;
-  }
-  
-  area.style.display = 'block';
-  grid.innerHTML = '';
-  
-  const start = new Date(startDateStr);
-  const end = new Date(endDateStr);
-  
-  let current = new Date(start.getFullYear(), start.getMonth(), 1);
-  const targetEnd = new Date(end.getFullYear(), end.getMonth(), 1);
-  
+  area.style.display = 'block'; grid.innerHTML = '';
+  const [sy, sm] = startDateStr.split('-').map(Number); const [ey, em] = endDateStr.split('-').map(Number);
+  let current = new Date(sy, sm - 1, 1); const targetEnd = new Date(ey, em - 1, 1);
   const qContainers = {}; 
   
   while (current <= targetEnd) {
-    const yyyy = current.getFullYear();
-    const m = current.getMonth() + 1; 
-    const mm = String(m).padStart(2, '0');
-    const ym = `${yyyy}/${mm}`;
-    const ts = current.getTime();
-    
-    const fiscalYear = m <= 3 ? yyyy - 1 : yyyy;
-    let q = '';
-    let qIndex = 0; 
-    
+    const yyyy = current.getFullYear(); const m = current.getMonth() + 1; const mm = String(m).padStart(2, '0'); const ym = `${yyyy}/${mm}`;
+    const fiscalYear = m <= 3 ? yyyy - 1 : yyyy; let q = ''; let qIndex = 0; 
     if (m >= 4 && m <= 6)      { q = '1Q'; qIndex = m - 4; }
     else if (m >= 7 && m <= 9) { q = '2Q'; qIndex = m - 7; }
     else if (m >= 10 && m <= 12){ q = '3Q'; qIndex = m - 10; }
     else                       { q = '4Q'; qIndex = m - 1; } 
-    
     const qKey = `${fiscalYear}_${q}`;
     
     if (!qContainers[qKey]) {
-      const qGroup = document.createElement('div');
-      qGroup.className = 'quarter-group';
-      
-      const qLabel = document.createElement('div');
-      qLabel.className = 'quarter-label';
-      qLabel.innerText = `${fiscalYear}年度 ${q}`;
-      qGroup.appendChild(qLabel);
-      
-      const qGrid = document.createElement('div');
-      qGrid.className = 'quarter-grid';
-      
-      for(let i = 0; i < 3; i++){
-        const slot = document.createElement('div');
-        slot.className = 'monthly-item empty';
-        qGrid.appendChild(slot);
-      }
-      qGroup.appendChild(qGrid);
-      
-      qContainers[qKey] = { group: qGroup, grid: qGrid };
-      grid.appendChild(qGroup);
+      const qGroup = document.createElement('div'); qGroup.className = 'quarter-group';
+      const qLabel = document.createElement('div'); qLabel.className = 'quarter-label'; qLabel.innerText = `${fiscalYear}年度 ${q}`; qGroup.appendChild(qLabel);
+      const qGrid = document.createElement('div'); qGrid.className = 'quarter-grid';
+      for(let i = 0; i < 3; i++){ const slot = document.createElement('div'); slot.className = 'monthly-item empty'; qGrid.appendChild(slot); }
+      qGroup.appendChild(qGrid); qContainers[qKey] = { group: qGroup, grid: qGrid }; grid.appendChild(qGroup);
     }
-    
     const targetSlot = qContainers[qKey].grid.children[qIndex];
     targetSlot.className = 'monthly-item';
-    targetSlot.innerHTML = `
-      <label>${ym}</label>
-      <input type="text" name="monthly_${ts}" class="monthly-input" value="0" oninput="formatAndCalculate(this)" onfocus="this.select()">
-    `;
-    
+    targetSlot.innerHTML = `<label>${ym}</label><input type="text" class="monthly-input" data-ym="${ym}" value="0" oninput="formatAndCalculate(this)" onfocus="this.select()">`;
     current.setMonth(current.getMonth() + 1);
   }
   calculateTotal();
 }
 
 function calculateTotal() {
-  const inputs = document.querySelectorAll('.monthly-input');
-  let total = 0;
-  inputs.forEach(input => {
-    total += parseNumber(input.value); 
-  });
-  
-  const formattedTotal = total.toLocaleString();
-  document.getElementById('monthly-total-display').innerText = formattedTotal;
+  const inputs = document.querySelectorAll('.monthly-input'); let total = 0;
+  inputs.forEach(input => { total += parseNumber(input.value); });
+  document.getElementById('monthly-total-display').innerText = total.toLocaleString();
   document.getElementById('amount').value = total; 
 }
 
-function showModal(message, callback, title = '入力エラー') {
-  document.getElementById('modal-title').textContent = title;
-  modalMessage.textContent = message; 
-  document.getElementById('modal-buttons-ok').style.display = 'block';
-  document.getElementById('modal-buttons-yesno').style.display = 'none';
-  modalCallback = callback;
-  modalOverlay.style.display = 'flex';
+function handleBuChange() {
+  const selectedBu = document.getElementById('bu').value;
+  const targetSheetGroup = document.getElementById('target-sheet-group'); const targetSheetSelect = document.getElementById('target-sheet');
+  targetSheetSelect.innerHTML = '<option value="">-- シートを選択してください --</option>';
+  if (!selectedBu) { targetSheetGroup.style.display = 'none'; return; }
+  const availableRoutes = globalRouteMap.filter(r => r[0] === selectedBu);
+
+  if (availableRoutes.length === 1) {
+    const option = document.createElement('option'); option.value = JSON.stringify({ sheet: availableRoutes[0][1], url: availableRoutes[0][2] || "" }); option.text = availableRoutes[0][1]; option.selected = true;
+    targetSheetSelect.appendChild(option); targetSheetGroup.style.display = 'none';
+  } else if (availableRoutes.length > 1) {
+    availableRoutes.forEach(r => { const option = document.createElement('option'); option.value = JSON.stringify({ sheet: r[1], url: r[2] || "" }); option.text = r[1]; targetSheetSelect.appendChild(option); });
+    targetSheetGroup.style.display = 'block';
+  } else { targetSheetGroup.style.display = 'none'; }
 }
 
-function showConfirmModal(title, message, onYes, onNo) {
-  document.getElementById('modal-title').textContent = title;
-  document.getElementById('modal-title').style.color = '#333';
-  modalMessage.innerHTML = message;
-  document.getElementById('modal-buttons-ok').style.display = 'none';
-  const yesnoDiv = document.getElementById('modal-buttons-yesno');
-  yesnoDiv.style.display = 'flex';
-  
-  const yesBtn = document.getElementById('modal-yes-btn');
-  const noBtn = document.getElementById('modal-no-btn');
-  
-  const newYesBtn = yesBtn.cloneNode(true);
-  const newNoBtn = noBtn.cloneNode(true);
-  yesBtn.parentNode.replaceChild(newYesBtn, yesBtn);
-  noBtn.parentNode.replaceChild(newNoBtn, noBtn);
-  
-  newYesBtn.addEventListener('click', () => { if (onYes) onYes(); });
-  newNoBtn.addEventListener('click', () => { modalOverlay.style.display = 'none'; if (onNo) onNo(); });
-  
-  modalOverlay.style.display = 'flex';
-}
-
-function setupStrictDatalist(inputId, datalistId, labelName) {
-  const input = document.getElementById(inputId);
-  input.addEventListener('change', function() {
-    const val = this.value.trim();
-    if (val === '') { this.classList.remove('input-error'); return; }
-    const datalist = document.getElementById(datalistId);
-    if (!datalist || datalist.options.length === 0) return;
-    const options = Array.from(datalist.options).map(opt => opt.value);
-    if (!options.includes(val)) {
-      this.classList.add('input-error');
-      showModal(`「${labelName}」はリストにある項目から選択してください。`, () => { setTimeout(() => input.focus(), 10); });
-    } else {
-      this.classList.remove('input-error');
-    }
-  });
-}
-
-function populateDatalist(datalistId) {
-  return function(suggestions) {
-    const datalist = document.getElementById(datalistId);
-    datalist.innerHTML = '';
-    if (suggestions && suggestions.length > 0) {
-      suggestions.forEach(item => {
-        const option = document.createElement('option');
-        option.value = item;
-        datalist.appendChild(option);
-      });
-    }
-  };
-}
+function showModal(msg, cb, title = '入力エラー') { document.getElementById('modal-title').textContent = title; modalMessage.textContent = msg; modalCallback = cb; modalOverlay.style.display = 'flex'; }
+function populateDatalist(id) { return function(sug) { const dl = document.getElementById(id); dl.innerHTML = ''; if (sug && sug.length > 0) { sug.forEach(item => { const op = document.createElement('option'); op.value = item; dl.appendChild(op); }); } }; }
 
 function updateDepartmentSuggestions() {
-  const selectedBu = document.getElementById('bu').value;
-  const departmentInput = document.getElementById('department');
-  populateDatalist('department-list')([]); 
-  departmentInput.value = '';
-  departmentInput.placeholder = '候補を読み込み中...';
-  departmentInput.classList.remove('input-error');
-
-  if (selectedBu) {
-    google.script.run.withSuccessHandler(suggestions => {
-      populateDatalist('department-list')(suggestions);
-      departmentInput.placeholder = suggestions.length > 0 ? '候補から選択してください' : '候補が見つかりません';
-    }).withFailureHandler(() => { 
-      departmentInput.placeholder = '候補の読み込みに失敗'; 
-    }).getDepartmentSuggestions(selectedBu);
-  } else {
-    departmentInput.placeholder = '先に対象BUを選択してください';
-  }
-}
-
-function validateInputMatch(inputId, datalistId, labelName) {
-  const input = document.getElementById(inputId);
-  const val = input.value.trim();
-  const datalist = document.getElementById(datalistId);
-  if (val === '') {
-    input.classList.remove('input-error');
-    return { valid: true };
-  }
-  const options = Array.from(datalist.options).map(opt => opt.value);
-  if (!options.includes(val)) {
-    input.classList.add('input-error');
-    return { valid: false, message: `「${labelName}」はリストにある項目から選択してください。\n(入力された値: ${val})` };
-  }
-  input.classList.remove('input-error');
-  return { valid: true };
+  const selectedBu = document.getElementById('bu').value; const deptInput = document.getElementById('department');
+  populateDatalist('department-list')([]); deptInput.value = ''; deptInput.placeholder = '候補を読み込み中...';
+  if (selectedBu) { google.script.run.withSuccessHandler(sug => { populateDatalist('department-list')(sug); deptInput.placeholder = sug.length > 0 ? '候補から選択してください' : '候補が見つかりません'; }).getDepartmentSuggestions(selectedBu); } 
+  else { deptInput.placeholder = '先に対象BUを選択してください'; }
 }
 
 myForm.addEventListener('submit', function(e) {
-  e.preventDefault();
-  messageDiv.style.display = 'none';
-  for (const v of fieldValidations) {
-    const result = validateInputMatch(v.id, v.list, v.label);
-    if (!result.valid) {
-      showModal(result.message, () => document.getElementById(v.id).focus());
-      return; 
-    }
-  }
-  submitButton.innerHTML = '<span class="spinner"></span>登録処理中...';
-  submitButton.disabled = true;
-  registerAnotherLink.style.display = 'none';
+  e.preventDefault(); messageDiv.style.display = 'none';
+  if (document.getElementById('target-sheet-group').style.display === 'block' && !document.getElementById('target-sheet').value) { showModal("保存先シートを選択してください。", null); return; }
+  submitButton.innerHTML = '<span class="spinner"></span>登録処理中...'; submitButton.disabled = true; registerAnotherLink.style.display = 'none';
+  const formObject = Object.fromEntries(new FormData(this).entries()); formObject.amount = parseNumber(formObject.amount);
+  if (document.getElementById('target-sheet').value) { const targetData = JSON.parse(document.getElementById('target-sheet').value); formObject.targetSheetName = targetData.sheet; formObject.targetUrl = targetData.url; }
 
-  const formObject = Object.fromEntries(new FormData(this).entries());
-  formObject.amount = parseNumber(formObject.amount);
-  
-  Object.keys(formObject).forEach(key => {
-    if (key.startsWith('monthly_')) {
-      formObject[key] = parseNumber(formObject[key]);
-    }
-  });
-  
+  const monthlyAmounts = {};
+  document.querySelectorAll('.monthly-input').forEach(input => { const ym = input.getAttribute('data-ym'); if (ym) { monthlyAmounts[ym] = parseNumber(input.value); } });
+  formObject.monthlyAmounts = monthlyAmounts;
+
   google.script.run
-  .withSuccessHandler(function(response) {
+  .withSuccessHandler(function(res) {
     messageDiv.style.display = 'block';
-    if (response.success) {
-      messageDiv.className = 'success';
-      myForm.style.display = 'none';
-      registerAnotherLink.style.display = 'block';
-    } else {
-      messageDiv.className = 'error';
-    }
-    messageDiv.innerText = response.message;
-    submitButton.innerHTML = '登録する';
-    submitButton.disabled = false;
+    if (res.success) { messageDiv.className = 'success'; myForm.style.display = 'none'; registerAnotherLink.style.display = 'block'; } 
+    else { messageDiv.className = 'error'; }
+    messageDiv.innerText = res.message; submitButton.innerHTML = '登録する'; submitButton.disabled = false;
   })
-  .withFailureHandler(function(error) {
-    messageDiv.style.display = 'block';
-    messageDiv.className = 'error';
-    messageDiv.innerText = 'スクリプトの実行に失敗しました: ' + error.message;
-    submitButton.innerHTML = '登録する';
-    submitButton.disabled = false;
-  })
+  .withFailureHandler(function(err) { messageDiv.style.display = 'block'; messageDiv.className = 'error'; messageDiv.innerText = 'エラー: ' + err.message; submitButton.innerHTML = '登録する'; submitButton.disabled = false; })
   .processForm(formObject);
 });
 
 registerAnotherLink.addEventListener('click', function(e) {
-  e.preventDefault();
-  myForm.reset();
-  document.querySelectorAll('input').forEach(input => input.classList.remove('input-error'));
-  document.getElementById('monthly-amounts-area').style.display = 'none';
-  document.getElementById('monthly-grid').innerHTML = '';
-  document.getElementById('monthly-total-display').innerText = '0';
-  
-  myForm.style.display = 'block';
-  messageDiv.style.display = 'none';
-  registerAnotherLink.style.display = 'none';
-  updateDepartmentSuggestions();
+  e.preventDefault(); myForm.reset(); document.getElementById('monthly-amounts-area').style.display = 'none'; document.getElementById('monthly-grid').innerHTML = ''; document.getElementById('monthly-total-display').innerText = '0'; document.getElementById('target-sheet-group').style.display = 'none';
+  myForm.style.display = 'block'; messageDiv.style.display = 'none'; registerAnotherLink.style.display = 'none'; updateDepartmentSuggestions();
   google.script.run.withSuccessHandler(populateDatalist('parent-id-list')).getParentIdSuggestions();
 });
 </script>
