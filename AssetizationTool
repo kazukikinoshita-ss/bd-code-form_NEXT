@@ -1,144 +1,747 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>資産化比率設定ツール</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f6f8; }
-    h2 { color: #333; }
-    .panel { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; background: #17a2b8; }
-    .btn:hover { background: #138496; }
-    .btn-search { background: #007bff; } .btn-search:hover { background: #0056b3; }
-    .form-group { margin-bottom: 15px; }
-    label { display: block; font-weight: bold; margin-bottom: 5px; }
-    input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-    #status { color: #007bff; font-weight: bold; margin-bottom: 15px; }
-    table { width: 100%; border-collapse: collapse; background: white; font-size: 0.9em; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    th { background-color: #f8f9fa; }
-    .ratio-input { width: 60px; padding: 4px; }
-    .error-text { color: red; font-size: 0.8em; display: none; }
+    :root {
+      --primary-color: #1a73e8;
+      --primary-hover: #1557b0;
+      --bg-color: #f8f9fa;
+      --card-bg: #ffffff;
+      --text-color: #3c4043;
+      --border-color: #dadce0;
+      --error-color: #d93025;
+      --success-color: #1e8e3e;
+      --warning-color: #f2994a;
+      --sub-text: #5f6368;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      padding: 20px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1360px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+      padding: 24px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+    .title { font-size: 1.25rem; font-weight: 600; color: #202124; }
+
+    /* フィルター＆コントロールバー */
+    .controls-bar {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 24px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      background: #f1f3f4;
+      padding: 16px 20px;
+      border-radius: 6px;
+    }
+    .control-group { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 6px; 
+    }
+    .control-group-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .control-label { 
+      font-size: 0.85rem; 
+      font-weight: 700; 
+      color: var(--sub-text); 
+    }
+    select, input[type="text"], input[type="number"], input[type="month"] {
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 0.95rem;
+      background-color: #fff;
+      color: var(--text-color);
+    }
+    input[type="text"].search-input {
+      width: 280px;
+    }
+    input[type="text"].search-input:focus,
+    input[type="month"]:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(26,115,232,0.2);
+    }
+    input[type="month"] {
+      width: 150px;
+      cursor: pointer;
+    }
+
+    /* MPコードカード */
+    .card-list { display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px; }
+    .mp-card {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .mp-card-header {
+      background: #e8f0fe;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .mp-title-group { display: flex; align-items: center; gap: 10px; }
+    .mp-code { font-weight: 700; color: #174ea6; font-size: 1rem; }
+    .mp-name { font-weight: 600; color: #202124; font-size: 0.95rem; }
+    .mp-bu-badge {
+      background: #ffffff;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1px solid #aecbfa;
+      color: #174ea6;
+    }
+
+    /* カード単位一括入力領域 */
+    .card-quick-fill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #ffffff;
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid #aecbfa;
+    }
+    .card-quick-fill label { font-size: 0.75rem; font-weight: 600; color: #174ea6; }
+
+    /* サブツールバー（プロジェクト追加領域） */
+    .project-add-bar {
+      background: #f8f9fa;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .project-add-bar label { font-size: 0.8rem; font-weight: 600; color: var(--sub-text); }
+
+    /* テーブルスタイル */
+    .table-wrapper { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 8px 10px;
+      text-align: center;
+      white-space: nowrap;
+    }
+    th { background: #f8f9fa; font-weight: 600; color: var(--sub-text); }
+    th.pj-col { text-align: left; min-width: 220px; }
+    th.action-col { width: 180px; }
+    td.pj-cell { text-align: left; font-weight: 500; }
+
+    /* 入力欄＆ボタンスタイル */
+    input.ratio-input {
+      width: 55px;
+      text-align: right;
+      padding: 4px 6px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    input.ratio-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(26,115,232,0.2);
+    }
+    input.quick-num-input {
+      width: 50px;
+      text-align: right;
+      padding: 3px 5px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+
+    .btn-sm {
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      background: #fff;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-sm:hover { background: #f1f3f4; }
+    .btn-sm-danger { color: var(--error-color); border-color: #fad2cf; }
+    .btn-sm-danger:hover { background: #fce8e6; }
+    .btn-sm-primary { color: var(--primary-color); border-color: #aecbfa; }
+    .btn-sm-primary:hover { background: #e8f0fe; }
+
+    .row-quick-control { display: flex; align-items: center; gap: 4px; justify-content: center; }
+    tr.total-row { background: #f1f3f4; font-weight: 700; }
+    .total-valid { color: var(--success-color); background-color: #e6f4ea; }
+    .total-invalid { color: var(--error-color); background-color: #fce8e6; }
+
+    /* フッターアクション */
+    .footer-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+    }
+    .btn {
+      padding: 8px 20px;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.2s;
+    }
+    .btn-secondary { background: #5f6368; color: #fff; }
+    .btn-secondary:hover { background: #45474a; }
+    .btn-primary { background: var(--primary-color); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #status-message {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      display: none;
+    }
+    .status-success { background: #e6f4ea; color: var(--success-color); border: 1px solid #ceedd5; }
+    .status-error { background: #fce8e6; color: var(--error-color); border: 1px solid #fad2cf; }
+    .empty-state { text-align: center; padding: 40px; color: var(--sub-text); font-size: 0.95rem; }
   </style>
 </head>
 <body>
-  <h2>資産化比率 入力ツール</h2>
-  <div class="panel">
-    <div class="form-group">
-      <label>対象MPコード (部分一致)</label>
-      <input type="text" id="mp-filter" placeholder="例: 000001">
+  <div class="container">
+    <div class="header">
+      <h1 class="title">資産化比率設定ツール (モック)</h1>
     </div>
-    <button class="btn btn-search" onclick="fetchData()">対象を検索</button>
-  </div>
 
-  <div id="status"></div>
-  
-  <div class="panel" id="results-panel" style="display:none;">
-    <button class="btn" onclick="saveData()">比率を保存する</button>
-    <br><br>
-    <table id="result-table">
-      <thead>
-        <tr>
-          <th>MPコード</th>
-          <th>一般科目</th>
-          <th>プロジェクト (PJC)</th>
-          <th>比率 (%)</th>
-          <th>合計チェック</th>
-        </tr>
-      </thead>
-      <tbody id="result-body"></tbody>
-    </table>
+    <!-- フィルター＆コントロール領域 -->
+    <div class="controls-bar">
+      <div class="control-group">
+        <label class="control-label" for="bu-select">1. 該当BU選択</label>
+        <select id="bu-select" onchange="onFilterChange()">
+          <option value="すべて">読み込み中...</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="mp-search-input">2. MPコード検索</label>
+        <input type="text" id="mp-search-input" class="search-input" 
+          placeholder="MPコード (例: 000001_001) または名称..." oninput="onFilterChange()" />
+      </div>
+
+      <!-- 画像UI完全準拠：表示期間カレンダーUI -->
+      <div class="control-group">
+        <label class="control-label">表示期間</label>
+        <div class="control-group-row">
+          <input type="month" id="start-ym-select" onchange="onPeriodChange()">
+          <span style="color: var(--sub-text); font-weight: bold;">〜</span>
+          <input type="month" id="end-ym-select" onchange="onPeriodChange()">
+        </div>
+      </div>
+    </div>
+
+    <!-- メインコンテンツ（カード一覧） -->
+    <div id="content-area">
+      <div class="empty-state">データを読み込んでいます...</div>
+    </div>
+
+    <!-- フッターアクション -->
+    <div class="footer-actions">
+      <button class="btn btn-secondary" onclick="goToMenu()">メニューに戻る</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveData()" disabled>データを保存する</button>
+    </div>
+
+    <div id="status-message"></div>
   </div>
 
   <script>
-    let currentData = [];
-    let pjcOptions = [];
+    /**
+     * @fileoverview 資産化比率設定ツールのフロントエンドロジック
+     * GASのモック関数から取得したデータを用いてマトリクスUIを描画・制御します。
+     */
 
-    window.onload = () => {
-      google.script.run.withSuccessHandler(res => { pjcOptions = res; }).getProjectSuggestionsTools();
-    };
+    // --- 設定定数 ---
+    const topUrl = "<?= topUrl ?>";
+    const DEFAULT_START_MONTH = '2026-04'; // 初期表示開始月
+    const DEFAULT_END_MONTH = '2027-03';   // 初期表示終了月
 
-    function fetchData() {
-      const mpFilter = document.getElementById('mp-filter').value;
-      document.getElementById('status').textContent = "検索中...";
-      
-      const filters = { budgetCode: mpFilter, selectedCategories: [], selectedBUs: [] };
-      google.script.run.withSuccessHandler(res => {
-        if(res.error) { document.getElementById('status').textContent = res.error; return; }
-        currentData = res.data;
-        document.getElementById('status').textContent = `${currentData.length} 件の対象勘定が見つかりました。`;
-        renderTable();
-      }).fetchAssetizationData(filters);
+    // --- グローバル変数 ---
+    let appData = null; 
+    let workingRatios = {}; 
+    let activeYearMonths = []; 
+
+    /**
+     * DOM読み込み完了時に初期データを取得します。
+     */
+    window.addEventListener('DOMContentLoaded', () => {
+      loadInitialData();
+    });
+
+    /**
+     * サーバーサイドからモックデータを非同期で読み込みます。
+     */
+    function loadInitialData() {
+      google.script.run
+        .withSuccessHandler(onInitialDataLoaded)
+        .withFailureHandler(onError)
+        .getMockInitialData();
     }
 
-    function renderTable() {
-      const body = document.getElementById('result-body');
-      body.innerHTML = '';
-      currentData.forEach((item, idx) => {
-        const tr = document.createElement('tr');
-        tr.dataset.idx = idx;
-        
-        const tdBd = document.createElement('td'); tdBd.textContent = item.bdCode;
-        const tdAc = document.createElement('td'); tdAc.textContent = item.account;
-        
-        const tdPjc = document.createElement('td');
-        const sel = document.createElement('select');
-        sel.className = 'pjc-select';
-        sel.add(new Option('--- 選択 ---', ''));
-        pjcOptions.forEach(p => sel.add(new Option(p.name, p.name)));
-        if(item.projects && item.projects.length > 0) sel.value = item.projects[0].project;
-        tdPjc.appendChild(sel);
-        
-        const tdRat = document.createElement('td');
-        const inp = document.createElement('input'); inp.type = 'number'; inp.className = 'ratio-input'; inp.min = '0'; inp.max = '100';
-        inp.value = (item.projects && item.projects.length > 0) ? item.projects[0].ratio : 0;
-        inp.oninput = () => checkTotal(tr);
-        tdRat.appendChild(inp);
-        
-        const tdChk = document.createElement('td');
-        tdChk.className = 'total-check';
-        const err = document.createElement('span'); err.className = 'error-text'; err.textContent = '※100%または0%にしてください';
-        tdChk.appendChild(err);
+    /**
+     * 初期データ読み込み成功時のコールバック。UIの初期化を行います。
+     * @param {Object} response サーバーからのレスポンスオブジェクト
+     */
+    function onInitialDataLoaded(response) {
+      if (!response || !response.success) {
+        showStatus('データ読み込みエラー: ' + (response ? response.message : '応答がありません'), true);
+        return;
+      }
 
-        tr.appendChild(tdBd); tr.appendChild(tdAc); tr.appendChild(tdPjc); tr.appendChild(tdRat); tr.appendChild(tdChk);
-        body.appendChild(tr);
-        checkTotal(tr);
+      appData = response;
+      workingRatios = JSON.parse(JSON.stringify(response.initialRatios || {}));
+
+      setupBuSelect(response.buList);
+      setupPeriodSelects(DEFAULT_START_MONTH, DEFAULT_END_MONTH);
+      updateActiveYearMonths();
+
+      renderCards();
+      document.getElementById('save-btn').disabled = false;
+    }
+
+    /**
+     * BU選択ドロップダウンの選択肢を生成します。
+     * @param {string[]} buList BU名の配列
+     */
+    function setupBuSelect(buList) {
+      const select = document.getElementById('bu-select');
+      select.innerHTML = '';
+      buList.forEach(bu => {
+        const opt = document.createElement('option');
+        opt.value = bu;
+        opt.textContent = bu;
+        select.appendChild(opt);
       });
-      document.getElementById('results-panel').style.display = 'block';
     }
 
-    function checkTotal(tr) {
-      const val = parseInt(tr.querySelector('.ratio-input').value || 0, 10);
-      const err = tr.querySelector('.error-text');
-      if(val !== 0 && val !== 100) { err.style.display = 'inline'; tr.style.backgroundColor = '#ffe6e6'; }
-      else { err.style.display = 'none'; tr.style.backgroundColor = 'transparent'; }
+    /**
+     * 表示期間のカレンダーUIにデフォルト値をセットします。
+     * @param {string} defaultStart 'YYYY-MM' 形式
+     * @param {string} defaultEnd 'YYYY-MM' 形式
+     */
+    function setupPeriodSelects(defaultStart, defaultEnd) {
+      document.getElementById('start-ym-select').value = defaultStart;
+      document.getElementById('end-ym-select').value = defaultEnd;
     }
 
+    /**
+     * カレンダーUIで期間が変更された際に発火し、描画を更新します。
+     */
+    function onPeriodChange() {
+      updateActiveYearMonths();
+      renderCards();
+    }
+
+    /**
+     * input[type="month"] の値 (YYYY-MM) から、動的にテーブル表示用の年月配列 (YYYY/MM) を生成します。
+     */
+    function updateActiveYearMonths() {
+      const startVal = document.getElementById('start-ym-select').value;
+      const endVal = document.getElementById('end-ym-select').value;
+
+      if (!startVal || !endVal) return;
+
+      let startDate = new Date(startVal + '-01');
+      let endDate = new Date(endVal + '-01');
+
+      // 開始月が終了月より後の場合はアラートを出し、終了月に合わせる
+      if (startDate > endDate) {
+        alert('開始年月は終了年月以前を選択してください。');
+        document.getElementById('start-ym-select').value = endVal;
+        startDate = new Date(endVal + '-01');
+      }
+
+      activeYearMonths = [];
+      let currentDate = new Date(startDate);
+      
+      // 開始月から終了月までの配列を生成
+      while (currentDate <= endDate) {
+        const y = currentDate.getFullYear();
+        const m = String(currentDate.getMonth() + 1).padStart(2, '0');
+        activeYearMonths.push(`${y}/${m}`);
+        currentDate.setMonth(currentDate.getMonth() + 1); // 1ヶ月進める
+      }
+    }
+
+    /**
+     * フィルター条件（BU・テキスト）の変更時に再描画を行います。
+     */
+    function onFilterChange() {
+      renderCards();
+    }
+
+    /**
+     * 設定された条件に基づいてマトリクスカード全体を再描画します。
+     */
+    function renderCards() {
+      const selectedBu = document.getElementById('bu-select').value;
+      const searchKeyword = document.getElementById('mp-search-input').value.trim().toLowerCase();
+      const contentArea = document.getElementById('content-area');
+      contentArea.innerHTML = '';
+
+      if (!appData || !appData.mpList) return;
+
+      let targetMps = appData.mpList.filter(mp => {
+        const matchBu = (selectedBu === 'すべて' || mp.bu === selectedBu);
+        const matchKeyword = (searchKeyword === '' || 
+                              mp.code.toLowerCase().includes(searchKeyword) || 
+                              mp.name.toLowerCase().includes(searchKeyword));
+        return matchBu && matchKeyword;
+      });
+
+      if (targetMps.length === 0) {
+        contentArea.innerHTML = '<div class="empty-state">該当するMPコードが見つかりません。</div>';
+        return;
+      }
+
+      const cardList = document.createElement('div');
+      cardList.className = 'card-list';
+
+      targetMps.forEach(mpInfo => {
+        const mpCode = mpInfo.code;
+        if (!workingRatios[mpCode]) {
+          workingRatios[mpCode] = [];
+        }
+        const projects = workingRatios[mpCode];
+
+        const card = document.createElement('div');
+        card.className = 'mp-card';
+
+        let html = `
+          <div class="mp-card-header">
+            <div class="mp-title-group">
+              <span class="mp-code">${mpCode}</span>
+              <span class="mp-name">${mpInfo.name}</span>
+              <span class="mp-bu-badge">${mpInfo.bu}</span>
+            </div>
+            <div class="card-quick-fill">
+              <label>全行一括:</label>
+              <input type="number" id="card-quick-val-${mpCode}" class="quick-num-input" min="0" max="100" placeholder="%" />
+              <button class="btn-sm btn-sm-primary" onclick="applyQuickFillCard('${mpCode}')">全適用</button>
+            </div>
+          </div>
+
+          <div class="project-add-bar">
+            <label>+ 配分プロジェクトの追加:</label>
+            <select id="add-pj-select-${mpCode}">
+              ${appData.projectList.map(pj => `<option value="${pj.code}">${pj.code} : ${pj.name}</option>`).join('')}
+            </select>
+            <button class="btn-sm btn-sm-primary" onclick="addProjectRow('${mpCode}')">追加する</button>
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th class="pj-col">対象プロジェクト</th>
+                  ${activeYearMonths.map(ym => `<th>${ym}</th>`).join('')}
+                  <th class="action-col">任意数値 一括入力</th>
+                  <th style="width: 50px;">削除</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        if (projects.length === 0) {
+          html += `
+            <tr>
+              <td colspan="${activeYearMonths.length + 3}" style="color: var(--sub-text); padding: 20px;">
+                プロジェクトが割り当てられていません。上のプルダウンから追加してください。
+              </td>
+            </tr>
+          `;
+        } else {
+          projects.forEach((pj, pIdx) => {
+            html += `
+              <tr>
+                <td class="pj-cell">${pj.projectName} (${pj.projectCode})</td>
+                ${activeYearMonths.map(ym => {
+                  const val = (pj.monthlyRatios && pj.monthlyRatios[ym] !== undefined) ? pj.monthlyRatios[ym] : 0;
+                  return `
+                    <td>
+                      <input type="number" class="ratio-input" 
+                        data-mp="${mpCode}" data-pjidx="${pIdx}" data-ym="${ym}"
+                        value="${val}" min="0" max="100" onchange="onInputChange('${mpCode}', ${pIdx}, '${ym}', this.value)" /> %
+                    </td>
+                  `;
+                }).join('')}
+                <td>
+                  <div class="row-quick-control">
+                    <input type="number" id="row-quick-val-${mpCode}-${pIdx}" class="quick-num-input" min="0" max="100" placeholder="%" />
+                    <button class="btn-sm btn-sm-primary" onclick="applyQuickFillRow('${mpCode}', ${pIdx})">表示月適用</button>
+                  </div>
+                </td>
+                <td>
+                  <button class="btn-sm btn-sm-danger" onclick="removeProjectRow('${mpCode}', ${pIdx})">✕</button>
+                </td>
+              </tr>
+            `;
+          });
+        }
+
+        html += `
+            <tr class="total-row">
+              <td class="pj-cell">月別合計比率</td>
+              ${activeYearMonths.map(ym => `<td id="total-${mpCode}-${ym.replace('/', '-')}">0%</td>`).join('')}
+              <td colspan="2">100%基準</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+        `;
+
+        card.innerHTML = html;
+        cardList.appendChild(card);
+      });
+
+      contentArea.appendChild(cardList);
+
+      targetMps.forEach(mp => recalculateTotal(mp.code));
+    }
+
+    /**
+     * 各月の入力欄が変更された際、データを保持マップに反映し合計を再計算します。
+     * @param {string} mpCode MPコード
+     * @param {number} pIdx プロジェクトのインデックス
+     * @param {string} ym 年月 (YYYY/MM)
+     * @param {string} val 入力された値
+     */
+    function onInputChange(mpCode, pIdx, ym, val) {
+      const num = Number(val) || 0;
+      if (workingRatios[mpCode] && workingRatios[mpCode][pIdx]) {
+        if (!workingRatios[mpCode][pIdx].monthlyRatios) {
+          workingRatios[mpCode][pIdx].monthlyRatios = {};
+        }
+        workingRatios[mpCode][pIdx].monthlyRatios[ym] = num;
+      }
+      recalculateTotal(mpCode);
+    }
+
+    /**
+     * マスタからプロジェクトを選択し、行として追加します。
+     * @param {string} mpCode 対象のMPコード
+     */
+    function addProjectRow(mpCode) {
+      const select = document.getElementById(`add-pj-select-${mpCode}`);
+      if (!select) return;
+
+      const selectedPjCode = select.value;
+      const pjMaster = appData.projectList.find(p => p.code === selectedPjCode);
+      if (!pjMaster) return;
+
+      if (!workingRatios[mpCode]) workingRatios[mpCode] = [];
+
+      const exists = workingRatios[mpCode].some(p => p.projectCode === selectedPjCode);
+      if (exists) {
+        alert(`プロジェクト [${pjMaster.name}] は既に追加されています。`);
+        return;
+      }
+
+      workingRatios[mpCode].push({
+        projectCode: pjMaster.code,
+        projectName: pjMaster.name,
+        monthlyRatios: {} // 入力時に動的追加
+      });
+
+      renderCards();
+    }
+
+    /**
+     * 指定されたプロジェクト行を削除します。
+     * @param {string} mpCode 対象のMPコード
+     * @param {number} pIdx 削除対象のインデックス
+     */
+    function removeProjectRow(mpCode, pIdx) {
+      if (workingRatios[mpCode] && workingRatios[mpCode][pIdx]) {
+        workingRatios[mpCode].splice(pIdx, 1);
+        renderCards();
+      }
+    }
+
+    /**
+     * 行内の表示中全月に対して、指定数値を一括で適用します。
+     * @param {string} mpCode 対象のMPコード
+     * @param {number} pIdx 対象のインデックス
+     */
+    function applyQuickFillRow(mpCode, pIdx) {
+      const inputEl = document.getElementById(`row-quick-val-${mpCode}-${pIdx}`);
+      if (!inputEl || inputEl.value === '') return;
+
+      const val = Number(inputEl.value) || 0;
+      if (workingRatios[mpCode] && workingRatios[mpCode][pIdx]) {
+        if (!workingRatios[mpCode][pIdx].monthlyRatios) {
+          workingRatios[mpCode][pIdx].monthlyRatios = {};
+        }
+        activeYearMonths.forEach(ym => {
+          workingRatios[mpCode][pIdx].monthlyRatios[ym] = val;
+        });
+        renderCards();
+      }
+    }
+
+    /**
+     * カード内の全PJ、表示中全月に対して、指定数値を一括で適用します。
+     * @param {string} mpCode 対象のMPコード
+     */
+    function applyQuickFillCard(mpCode) {
+      const inputEl = document.getElementById(`card-quick-val-${mpCode}`);
+      if (!inputEl || inputEl.value === '') return;
+
+      const val = Number(inputEl.value) || 0;
+      if (workingRatios[mpCode]) {
+        workingRatios[mpCode].forEach(pj => {
+          if (!pj.monthlyRatios) pj.monthlyRatios = {};
+          activeYearMonths.forEach(ym => {
+            pj.monthlyRatios[ym] = val;
+          });
+        });
+        renderCards();
+      }
+    }
+
+    /**
+     * 指定されたMPコードカードの月別合計を再計算し、色分けを行います。
+     * @param {string} mpCode 対象のMPコード
+     */
+    function recalculateTotal(mpCode) {
+      const projects = workingRatios[mpCode] || [];
+
+      activeYearMonths.forEach(ym => {
+        let sum = 0;
+        projects.forEach(pj => {
+          sum += Number(pj.monthlyRatios ? pj.monthlyRatios[ym] : 0) || 0;
+        });
+
+        const totalCell = document.getElementById(`total-${mpCode}-${ym.replace('/', '-')}`);
+        if (totalCell) {
+          totalCell.textContent = sum + '%';
+          if (sum === 100 || sum === 0) {
+            totalCell.className = 'total-valid';
+          } else {
+            totalCell.className = 'total-invalid';
+          }
+        }
+      });
+    }
+
+    /**
+     * 編集したデータをサーバーへ保存します。
+     */
     function saveData() {
-      const rows = document.querySelectorAll('#result-body tr');
-      let hasError = false;
-      const payload = [];
-      
-      rows.forEach(tr => {
-        const idx = tr.dataset.idx;
-        const pjc = tr.querySelector('.pjc-select').value;
-        const ratio = parseInt(tr.querySelector('.ratio-input').value || 0, 10);
-        if(ratio !== 0 && ratio !== 100) hasError = true;
-        
-        const item = currentData[idx];
-        const newData = { bdCode: item.bdCode, account: item.account, category: item.category, projects: [] };
-        if(pjc && ratio > 0) newData.projects.push({ project: pjc, ratio: ratio });
-        payload.push(newData);
+      const saveBtn = document.getElementById('save-btn');
+      saveBtn.disabled = true;
+      showStatus('データを送信・保存中...', false);
+
+      const cardsPayload = [];
+
+      Object.keys(workingRatios).forEach(mpCode => {
+        const mpInfo = appData.mpList.find(m => m.code === mpCode) || {};
+        const projects = workingRatios[mpCode];
+
+        if (projects && projects.length > 0) {
+          cardsPayload.push({
+            mpCode: mpCode,
+            mpName: mpInfo.name || '',
+            bu: mpInfo.bu || '',
+            projects: projects
+          });
+        }
       });
 
-      if(hasError) { alert('比率が100%または0%になっていない行があります。修正してください。'); return; }
+      const payload = { cards: cardsPayload };
 
-      document.getElementById('status').textContent = "保存中...";
-      google.script.run.withSuccessHandler(res => {
-        document.getElementById('status').textContent = res;
-        alert('保存が完了しました。');
-      }).withFailureHandler(err => {
-        document.getElementById('status').textContent = "エラー: " + err.message;
-      }).saveAssetizationData(payload);
+      google.script.run
+        .withSuccessHandler(onSaveSuccess)
+        .withFailureHandler(onError)
+        .saveAssetizationRatioMock(payload);
+    }
+
+    /**
+     * 保存成功時のコールバック。
+     * @param {Object} response サーバーからのレスポンスオブジェクト
+     */
+    function onSaveSuccess(response) {
+      document.getElementById('save-btn').disabled = false;
+      if (response && response.success) {
+        showStatus(response.message, false);
+      } else {
+        showStatus('保存エラー: ' + (response ? response.message : '不明なエラー'), true);
+      }
+    }
+
+    /**
+     * 通信エラーやサーバーエラー発生時のコールバック。
+     * @param {Error} error 例外オブジェクト
+     */
+    function onError(error) {
+      document.getElementById('save-btn').disabled = false;
+      showStatus('通信エラーが発生しました: ' + error.message, true);
+    }
+
+    /**
+     * 画面下部にステータスメッセージを表示します。
+     * @param {string} msg 表示するメッセージ
+     * @param {boolean} isError エラー表示かどうかのフラグ
+     */
+    function showStatus(msg, isError) {
+      const el = document.getElementById('status-message');
+      el.style.display = 'block';
+      el.className = isError ? 'status-error' : 'status-success';
+      el.textContent = msg;
+    }
+
+    /**
+     * 経費管理システムのメインメニューへ遷移します。
+     */
+    function goToMenu() {
+      if (topUrl) {
+        window.location.href = topUrl;
+      } else {
+        window.location.href = "<?= ScriptApp.getService().getUrl() ?>";
+      }
     }
   </script>
 </body>
