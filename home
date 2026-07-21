@@ -24,6 +24,9 @@
       .button.depreciation:hover { background-color: #1e7e34; }
       .button.assetization { background-color: #17a2b8; }
       .button.assetization:hover { background-color: #138496; }
+      /* 資産化比率ツール（モック）用のアクセントカラー（オレンジ） */
+      .button.assetization-mock { background-color: #fd7e14; }
+      .button.assetization-mock:hover { background-color: #e06805; }
       hr { border: none; border-top: 1px solid #eee; margin: 2.5rem 0; }
     </style>
   </head>
@@ -37,6 +40,8 @@
       <hr>
       
       <a href="<?= topUrl ?>?page=WebApp" class="button assetization" target="_blank" rel="noopener noreferrer">金額データ一括検索・更新ツール</a>
+      <!-- 【新規追加】資産化比率ツールへの遷移ボタン -->
+      <a href="<?= topUrl ?>?page=assetization" class="button assetization-mock" target="_blank" rel="noopener noreferrer">資産化比率ツール (モック)</a>
     </div>
   </body>
 </html>
