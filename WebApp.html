@@ -69,7 +69,7 @@
   </style>
 </head>
 <body>
-<div class="header-nav"><a href="#" id="top-link" class="back-button">← メニューに戻る</a></div>
+<div class="header-nav"><a href="<?= topUrl ?>" id="top-link" class="back-button">← メニューに戻る</a></div>
 
 <div class="container">
   <h1>金額データ一括検索・更新ツール</h1>
@@ -82,7 +82,7 @@
     </div>
 
     <div class="sheet-select-area" id="sheet-select-area">
-      <label>▼ まず最初に対象 of シートを選択してください</label>
+      <label>▼ まず最初に対象のシートを選択してください</label>
       <select id="sheet-select" onchange="loadSheetData()">
         <option value="">-- シートの読み込み中... --</option>
       </select>
@@ -170,7 +170,10 @@ function initSettings(settings) {
   });
   if (settings.defaultStartDate) document.getElementById('start-date-select').value = settings.defaultStartDate;
   if (settings.defaultEndDate) document.getElementById('end-date-select').value = settings.defaultEndDate;
-  setLoading(false); showStatus('対象のシートを選択してください。', false);
+  
+  // 💡復旧: ユーザーの選択を待機させる正しい状態に戻しました
+  setLoading(false); 
+  showStatus('対象のシートを選択してください。', false);
 }
 
 function handleSearchModeChange() {
@@ -189,9 +192,6 @@ function handleSearchModeChange() {
   }
 }
 
-/**
- * 💡 新設計：シートを選択した1回だけ、すべてのベースレコードとMPレコードを合流させてロードします。
- */
 function loadSheetData() {
   const selectedRouteIndex = document.getElementById('sheet-select').value;
   if (selectedRouteIndex === "") {
@@ -204,7 +204,7 @@ function loadSheetData() {
   setLoading(true, `指定シートデータの高速一括ロード・JOIN解析中 (最大3000行)...`);
   google.script.run
     .withSuccessHandler(data => {
-      g_masterData = data; // すべての結合データがブラウザのメモリにキャッシュされます
+      g_masterData = data; 
       
       populateCheckboxes('dept-filter-container', data.groups); 
       populateCheckboxes('subject-filter-container', data.subjects); 
@@ -223,7 +223,10 @@ function loadSheetData() {
       
       updateSuggestions(); 
       setLoading(false); 
-      showStatus('ロードおよびメモリ格納が完了しました。フィルタはミリ秒単位で高速検索できます。', false);
+      showStatus('ロードが完了しました。初期条件で自動検索を実行しました。', false);
+      
+      // 💡改修: シートのロードと描画が完了した直後に、自動的に検索を発火させる（案Aの実装）
+      searchData();
     })
     .withFailureHandler(err => { setLoading(false); showStatus('シート読込失敗: ' + err.message, true); })
     .getEntireSheetData(selectedRouteIndex); 
@@ -242,16 +245,12 @@ function updateSuggestions() {
   Array.from(uniqueValues).sort().slice(0, 500).forEach(val => { datalist.innerHTML += `<option value="${val}"></option>`; });
 }
 
-/**
- * 💡 新設計：検索ボタンを押した瞬間、「ゼロ秒（ミリ秒単位）」でブラウザ上でフィルタリングを実行します。
- */
 function searchData() {
   const sDate = document.getElementById('start-date-select').value; 
   const eDate = document.getElementById('end-date-select').value;
   if (sDate > eDate) { alert('表示期間が不正です。'); return; }
   currentSearchDateRange = { startDate: sDate, endDate: eDate };
 
-  // MPコード直接検索の場合は、全シートをマージする必要があるためハイブリッド通信処理を行います
   if (document.getElementById('use-budget-code-search').checked) {
     const bdCode = document.getElementById('budget-code-search').value.trim(); 
     if (!bdCode) { alert("MPコードを入力してください。"); return; }
@@ -265,21 +264,12 @@ function searchData() {
           const response = JSON.parse(jsonResponse);
           if (response.searchResults.length === 0) { setLoading(false); showStatus('該当するMPコードが見つかりませんでした。', false); return; }
           
-          // 画面用に結合
-          response.searchResults.forEach(resItem => {
-             resItem.mpData = "__NOT_FOUND__";
-          });
-          
-          g_masterData = {
-            records: response.searchResults,
-            mpSheetName: 'MP',
-            remarksInfo: response.remarksInfo,
-            basicInfo: response.basicInfo
-          };
+          response.searchResults.forEach(resItem => { resItem.mpData = "__NOT_FOUND__"; });
+          g_masterData = { records: response.searchResults, mpSheetName: 'MP', remarksInfo: response.remarksInfo, basicInfo: response.basicInfo };
           allFilteredItems = response.searchResults;
           currentPage = 1;
           displayLocalResults(response.monthlyHeaders);
-          loadMpDataBackground(response.searchResults, response.monthlyHeaders); // ハイブリッド時のバックグラウンド取得
+          loadMpDataBackground(response.searchResults, response.monthlyHeaders);
           setLoading(false); 
         } catch(e) { setLoading(false); showStatus("エラー: " + e.message, true); }
       })
@@ -288,7 +278,6 @@ function searchData() {
     return;
   }
 
-  // 💡 通常のフィルタリング：通信0回で瞬時に配列操作
   const selectedGroups = getSelectedCheckboxes('dept-filter-container'); 
   const selectedSubjects = getSelectedCheckboxes('subject-filter-container'); 
   const otherCol = document.getElementById('other-column').value; 
@@ -310,7 +299,6 @@ function searchData() {
   if (allFilteredItems.length === 0) { setLoading(false); showStatus('条件に一致するデータがありませんでした。', false); return; }
   currentPage = 1; 
   
-  // 表示用月別日付ヘッダーの抽出
   const monthlyHeaders = g_masterData.dateOptions.map(ymStr => {
     const [y, m] = ymStr.split('-').map(Number);
     return new Date(y, m - 1, 1).getTime();
@@ -324,9 +312,6 @@ function searchData() {
   setLoading(false);
 }
 
-/**
- * 💡 ページめくり：GASとの通信は一切せず、メモリから10件切り抜いて一瞬で再描画します。
- */
 function fetchPageData() {
   const sDate = document.getElementById('start-date-select').value;
   const monthlyHeaders = g_masterData.dateOptions.map(ymStr => {
@@ -382,7 +367,6 @@ function displayLocalResults(monthlyHeaders) {
         const ym = `${d.getFullYear()}/${('0'+(d.getMonth()+1)).slice(-2)}`; 
         const valRaw = (data[ts] !== undefined && data[ts] !== null) ? Number(data[ts]) : 0;
         
-        // 💡 新設計：すでに事前結合されているMP金額を出力（遅延時間・タイムラグ無し）
         let mpValDisplay = '該当なし';
         if (data.mpData && data.mpData !== "__NOT_FOUND__") {
           const val = data.mpData[ts];
@@ -512,19 +496,36 @@ function showCustomModal(msg) {
 
 function closeCustomModal() {
   document.getElementById('custom-modal').style.display = 'none';
-  if (document.getElementById('use-budget-code-search').checked) {
-    searchData();
-  } else {
-    // 💡 更新後は、シートの全最新データ(他人の更新分含む)を再取得してから再表示
-    loadSheetData();
-  }
 }
 
-/**
- * 💡 楽観的ロック更新（単一）
- * 入力された変更後の値(updates)だけでなく、ロード時点のセルの値(originals)もあわせてGASに送り、
- * 誰かに上書きされていないかを検証します。
- */
+function applyUpdatesToLocalMemory(updatesArray) {
+  updatesArray.forEach(uItem => {
+    const rNum = uItem.rowNumber;
+    const updates = uItem.updates;
+    const matchedItem = allFilteredItems.find(item => item.rowNumber === rNum);
+    if (matchedItem) {
+      Object.keys(updates).forEach(key => { matchedItem[key] = updates[key]; });
+    }
+    const masterItem = g_masterData.records.find(item => item.rowNumber === rNum);
+    if (masterItem) {
+      Object.keys(updates).forEach(key => { masterItem[key] = updates[key]; });
+    }
+  });
+  
+  const sDate = document.getElementById('start-date-select').value; 
+  const eDate = document.getElementById('end-date-select').value;
+  const monthlyHeaders = g_masterData.dateOptions.map(ymStr => {
+    const [y, m] = ymStr.split('-').map(Number);
+    return new Date(y, m - 1, 1).getTime();
+  }).filter(timeMs => {
+    const d = new Date(timeMs);
+    const ym = `${d.getFullYear()}-${('0'+(d.getMonth()+1)).slice(-2)}`;
+    return ym >= sDate && ym <= eDate;
+  });
+
+  displayLocalResults(monthlyHeaders);
+}
+
 function updateSingleItem(rowNum) {
   const updates = {}; 
   const originals = {};
@@ -555,18 +556,16 @@ function updateSingleItem(rowNum) {
   google.script.run
     .withSuccessHandler((msg) => { 
       setLoading(false); 
+      applyUpdatesToLocalMemory([{ rowNumber: rowNum, updates: updates }]);
       showCustomModal(msg); 
     })
     .withFailureHandler((err) => {
       setLoading(false);
-      alert(err.message); // 競合エラーメッセージ等をトーストで警告
+      alert(err.message); 
     })
     .updateMultipleDataWithConflictCheck([{ rowNumber: rowNum, updates: updates, originals: originals }]);
 }
 
-/**
- * 💡 楽観的ロック更新（一括）
- */
 function updateAllData() {
   const allUpdates = [];
   document.querySelectorAll('.result-card').forEach(card => {
@@ -604,6 +603,7 @@ function updateAllData() {
   google.script.run
     .withSuccessHandler((msg) => { 
       setLoading(false); 
+      applyUpdatesToLocalMemory(allUpdates);
       showCustomModal(msg); 
     })
     .withFailureHandler((err) => {
